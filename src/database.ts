@@ -6,6 +6,21 @@ export type DatabaseArgs = {
   databaseFilePath: string;
 };
 
+export type IncomeRegularityArgs = {
+  userId: string;
+  from: string;
+  monthCount: number;
+  incomeCategoryCodes: readonly string[];
+};
+
+export type IncomeRegularity = {
+  windowStart: string;
+  windowEnd: string;
+  monthsWithIncome: number;
+  incomeRegularity: number;
+  points: number;
+};
+
 let database: Database.Database | undefined;
 let singleDatabaseFilePath: string | undefined;
 
@@ -142,5 +157,86 @@ export function mkSaveTransactions(args: DatabaseArgs) {
       .all(...values);
 
     return inserted.length;
+  };
+}
+
+export function mkGetIncomeRegularity(args: DatabaseArgs) {
+  const database = getDatabase(args.databaseFilePath);
+  const statement = database.prepare(`
+    WITH
+    configuration AS (
+      SELECT
+        @userId AS user_id,
+        @from AS window_end,
+        @monthCount AS month_count
+    ),
+    scoring_window AS (
+      SELECT
+        *,
+        date(
+          window_end,
+          'start of month',
+          printf('-%d months', month_count - 1)
+        ) AS window_start
+      FROM configuration
+    ),
+    income_category_codes AS (
+      SELECT CAST(value AS TEXT) AS code
+      FROM json_each(@incomeCategoryCodesJson)
+    ),
+    income_transactions AS (
+      SELECT t.transaction_date
+      FROM scoring_window
+      JOIN accounts AS a
+        ON a.user_id = scoring_window.user_id
+      JOIN transactions AS t
+        ON t.account_id = a.id
+      WHERE t.transaction_date
+        BETWEEN scoring_window.window_start AND scoring_window.window_end
+        AND (
+          t.type = 'credit'
+          OR t.merchant_category_code IN (
+            SELECT code FROM income_category_codes
+          )
+        )
+    ),
+    income_summary AS (
+      SELECT
+        COUNT(DISTINCT substr(transaction_date, 1, 7))
+          AS months_with_income
+      FROM income_transactions
+    )
+    SELECT
+      scoring_window.window_start AS "windowStart",
+      scoring_window.window_end AS "windowEnd",
+      income_summary.months_with_income AS "monthsWithIncome",
+      income_summary.months_with_income * 1.0
+        / scoring_window.month_count AS "incomeRegularity",
+      CAST(
+        ROUND(
+          income_summary.months_with_income * 25.0
+            / scoring_window.month_count
+        ) AS INTEGER
+      ) AS points
+    FROM scoring_window
+    CROSS JOIN income_summary
+  `);
+
+  return ({
+    userId,
+    from,
+    monthCount,
+    incomeCategoryCodes,
+  }: IncomeRegularityArgs): IncomeRegularity => {
+    if (!Number.isSafeInteger(monthCount) || monthCount < 1) {
+      throw new RangeError("monthCount must be a positive integer");
+    }
+
+    return statement.get({
+      userId,
+      from,
+      monthCount,
+      incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
+    }) as IncomeRegularity;
   };
 }

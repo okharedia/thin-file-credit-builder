@@ -1,0 +1,13 @@
+{
+  "testing.gutterEnabled": true,
+  "nodejs-testing.extensions": [
+    {
+      "extensions": ["mjs", "cjs", "js"],
+      "parameters": []
+    },
+    {
+      "extensions": ["mts", "cts", "ts", "tsx"],
+      "parameters": ["--import", "tsx"]
+    }
+  ]
+}
