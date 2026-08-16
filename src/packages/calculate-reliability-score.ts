@@ -291,6 +291,15 @@ export function calculateHighRiskSpendingPoints({
   return penalty === 0 ? 0 : -penalty;
 }
 
+export function sumNegativeBalanceDayCounts(
+  accountCounts: readonly AccountNegativeBalanceDayCount[],
+): number {
+  return accountCounts.reduce(
+    (total, account) => total + account.negativeBalanceDayCount,
+    0,
+  );
+}
+
 /**
  * Calculates the −20 to +25 resilience points.
  *
@@ -301,11 +310,9 @@ export function calculateResiliencePoints({
   checkingAccountNegativeBalanceDayCounts,
   ...metrics
 }: ResilienceMetrics): number {
-  const negativeBalanceDayCount =
-    checkingAccountNegativeBalanceDayCounts.reduce(
-      (total, account) => total + account.negativeBalanceDayCount,
-      0,
-    );
+  const negativeBalanceDayCount = sumNegativeBalanceDayCounts(
+    checkingAccountNegativeBalanceDayCounts,
+  );
 
   return calculateSavingsBehaviorPoints(metrics)
     + calculateNegativeBalancePoints({ negativeBalanceDayCount })

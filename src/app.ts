@@ -1,6 +1,8 @@
 import Fastify from "fastify";
+import * as z from "zod";
 import type { BankingArgs } from "./banking/index.js";
 import { mkCloseDatabase, type DatabaseArgs } from "./database.js";
+import { mkGetUserReliability } from "./packages/get-user-reliability.js";
 import { mkSyncUser } from "./packages/sync-user.js";
 
 type UserParams = {
@@ -11,9 +13,14 @@ type ReliabilityQuery = {
   from?: string;
 };
 
+const reliabilityQuerySchema = z.object({
+  from: z.iso.date(),
+});
+
 export function buildApp(args: BankingArgs & DatabaseArgs) {
   const app = Fastify({ logger: true });
   const closeDatabase = mkCloseDatabase(args);
+  const getUserReliability = mkGetUserReliability(args);
   const syncUser = mkSyncUser(args);
 
   app.addHook("onClose", async () => {
@@ -32,11 +39,17 @@ export function buildApp(args: BankingArgs & DatabaseArgs) {
   app.get<{ Params: UserParams; Querystring: ReliabilityQuery }>(
     "/api/users/:userId/reliability",
     async (request, reply) => {
-      return reply.code(501).send({
-        error: "Not implemented",
-        user_id: request.params.userId,
-        from: request.query.from ?? null,
-      });
+      const query = reliabilityQuerySchema.safeParse(request.query);
+
+      if (!query.success) {
+        return reply.code(400).send({
+          error: "from must be a valid date in YYYY-MM-DD format",
+        });
+      }
+
+      return reply.send(
+        await getUserReliability(request.params.userId, query.data.from),
+      );
     },
   );
 

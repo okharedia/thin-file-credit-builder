@@ -1,6 +1,11 @@
 export { mkListAccounts, type Account } from "./account.js";
 export { mkGetDataRange, type DataRange } from "./data-range.js";
 export {
+  mkListMerchantCategories,
+  type MerchantCategory,
+  type MerchantCategoryGroup,
+} from "./merchant-category.js";
+export {
   mkGetTransactionPage,
   type Transaction,
   type TransactionPage,
