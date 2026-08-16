@@ -24,16 +24,24 @@ export type ReliabilityMetricsArgs = {
   monthCount: number;
   incomeCategoryCodes: readonly string[];
   essentialCategoryCodes: readonly string[];
+  savingsCategoryCodes: readonly string[];
+  feeCategoryCodes: readonly string[];
+  highRiskCategoryCodes: readonly string[];
 };
 
 export type ReliabilityMetrics = {
   windowStart: string;
   windowEnd: string;
-  monthsWithIncome: number;
-  incomeRegularity: number;
-  incomeCoverageRatio: number | null;
-  essentialPaymentsConsistency: number | null;
-  incomeRegularityPoints: number;
+  scoringWindowMonthCount: number;
+  incomeMonthCount: number;
+  totalIncomeCents: number;
+  totalEssentialExpensesCents: number;
+  essentialCategoryMonthCount: number;
+  essentialCategoryCount: number;
+  savingsMonthCount: number;
+  lateFeeEventCount: number;
+  totalDebitCents: number;
+  totalHighRiskDebitCents: number;
 };
 
 let database: Database.Database | undefined;
@@ -280,19 +288,40 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
       SELECT CAST(value AS TEXT) AS code
       FROM json_each(@essentialCategoryCodesJson)
     ),
-    scoring_transactions AS (
+    savings_category_codes AS (
+      SELECT CAST(value AS TEXT) AS code
+      FROM json_each(@savingsCategoryCodesJson)
+    ),
+    fee_category_codes AS (
+      SELECT CAST(value AS TEXT) AS code
+      FROM json_each(@feeCategoryCodesJson)
+    ),
+    high_risk_category_codes AS (
+      SELECT CAST(value AS TEXT) AS code
+      FROM json_each(@highRiskCategoryCodesJson)
+    ),
+    flagged_transactions AS (
       SELECT
         t.transaction_date,
         t.amount_cents,
         t.merchant_category_code,
+        t.type = 'debit' AS is_debit,
         t.type = 'credit'
           OR t.merchant_category_code IN (
             SELECT code FROM income_category_codes
           ) AS is_income,
-        t.type = 'debit'
-          AND t.merchant_category_code IN (
-            SELECT code FROM essential_category_codes
-          ) AS is_essential_expense
+        t.merchant_category_code IN (
+          SELECT code FROM essential_category_codes
+        ) AS is_essential_expense,
+        t.merchant_category_code IN (
+          SELECT code FROM savings_category_codes
+        ) AS is_savings,
+        t.merchant_category_code IN (
+          SELECT code FROM fee_category_codes
+        ) AS is_late_fee,
+        t.merchant_category_code IN (
+          SELECT code FROM high_risk_category_codes
+        ) AS is_high_risk
       FROM scoring_window
       JOIN accounts AS a
         ON a.user_id = scoring_window.user_id
@@ -301,13 +330,13 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
       WHERE t.transaction_date
         BETWEEN scoring_window.window_start AND scoring_window.window_end
     ),
-    metric_totals AS (
+    metrics AS (
       SELECT
         COUNT(DISTINCT substr(transaction_date, 1, 7))
           FILTER (WHERE is_income) AS months_with_income,
         COALESCE(
           SUM(amount_cents)
-            FILTER (WHERE amount_cents > 0 AND is_income),
+            FILTER (WHERE is_income),
           0
         ) AS total_income_cents,
         COALESCE(
@@ -317,42 +346,39 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         ) AS total_essential_expenses_cents,
         COUNT(
           DISTINCT merchant_category_code || ':' || substr(transaction_date, 1, 7)
-        ) FILTER (WHERE is_essential_expense) AS essential_category_months
-      FROM scoring_transactions
-    ),
-    essential_category_summary AS (
-      SELECT COUNT(DISTINCT code) AS essential_category_count
-      FROM essential_category_codes
-    ),
-    metrics AS (
-      SELECT
-        metric_totals.months_with_income,
-        metric_totals.essential_category_months,
-        essential_category_summary.essential_category_count,
-        metric_totals.total_income_cents * 1.0
-          / NULLIF(metric_totals.total_essential_expenses_cents, 0)
-          AS income_coverage_ratio
-      FROM metric_totals
-      CROSS JOIN essential_category_summary
+        ) FILTER (WHERE is_essential_expense) AS essential_category_months,
+        COUNT(DISTINCT substr(transaction_date, 1, 7))
+          FILTER (
+            WHERE is_savings AND amount_cents > 0
+          ) AS months_with_savings,
+        COUNT(*)
+          FILTER (WHERE is_late_fee) AS late_fee_events,
+        COALESCE(
+          SUM(-amount_cents)
+            FILTER (WHERE is_debit),
+          0
+        ) AS total_debit_cents,
+        COALESCE(
+          SUM(-amount_cents)
+            FILTER (WHERE is_debit AND is_high_risk),
+          0
+        ) AS high_risk_debit_cents
+      FROM flagged_transactions
     )
     SELECT
       scoring_window.window_start AS "windowStart",
       scoring_window.window_end AS "windowEnd",
-      metrics.months_with_income AS "monthsWithIncome",
-      metrics.months_with_income * 1.0
-        / scoring_window.month_count AS "incomeRegularity",
-      metrics.income_coverage_ratio AS "incomeCoverageRatio",
-      metrics.essential_category_months * 1.0
-        / NULLIF(
-          scoring_window.month_count * metrics.essential_category_count,
-          0
-        ) AS "essentialPaymentsConsistency",
-      CAST(
-        ROUND(
-          metrics.months_with_income * 25.0
-            / scoring_window.month_count
-        ) AS INTEGER
-      ) AS "incomeRegularityPoints"
+      scoring_window.month_count AS "scoringWindowMonthCount",
+      metrics.months_with_income AS "incomeMonthCount",
+      metrics.total_income_cents AS "totalIncomeCents",
+      metrics.total_essential_expenses_cents
+        AS "totalEssentialExpensesCents",
+      metrics.essential_category_months
+        AS "essentialCategoryMonthCount",
+      metrics.months_with_savings AS "savingsMonthCount",
+      metrics.late_fee_events AS "lateFeeEventCount",
+      metrics.total_debit_cents AS "totalDebitCents",
+      metrics.high_risk_debit_cents AS "totalHighRiskDebitCents"
     FROM scoring_window
     CROSS JOIN metrics
   `);
@@ -363,17 +389,28 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
     monthCount,
     incomeCategoryCodes,
     essentialCategoryCodes,
+    savingsCategoryCodes,
+    feeCategoryCodes,
+    highRiskCategoryCodes,
   }: ReliabilityMetricsArgs): ReliabilityMetrics => {
     if (!Number.isSafeInteger(monthCount) || monthCount < 1) {
       throw new RangeError("monthCount must be a positive integer");
     }
 
-    return statement.get({
+    const metrics = statement.get({
       userId,
       from,
       monthCount,
       incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
       essentialCategoryCodesJson: JSON.stringify(essentialCategoryCodes),
-    }) as ReliabilityMetrics;
+      savingsCategoryCodesJson: JSON.stringify(savingsCategoryCodes),
+      feeCategoryCodesJson: JSON.stringify(feeCategoryCodes),
+      highRiskCategoryCodesJson: JSON.stringify(highRiskCategoryCodes),
+    }) as Omit<ReliabilityMetrics, "essentialCategoryCount">;
+
+    return {
+      ...metrics,
+      essentialCategoryCount: new Set(essentialCategoryCodes).size,
+    };
   };
 }

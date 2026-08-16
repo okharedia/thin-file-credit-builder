@@ -26,7 +26,7 @@ function transaction(
   id: string,
   date: string,
   amount = 100,
-  merchantCategoryCode = "5812",
+  merchantCategoryCode = "0000",
 ): Transaction {
   return {
     id,
@@ -69,10 +69,14 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     transaction("september-income", "2025-09-01", -100, "9001"),
     transaction("october-credit", "2025-10-15", 100),
     transaction("october-second-credit", "2025-10-20", 100),
-    transaction("november-debit", "2025-11-10", -100),
-    transaction("december-debit", "2025-12-10", -100),
-    transaction("january-debit", "2026-01-10", -100),
+    transaction("october-savings", "2025-10-25", 50, "6540"),
+    transaction("november-debit", "2025-11-10", -100, "5812"),
+    transaction("november-high-risk", "2025-11-15", -50, "7995"),
+    transaction("december-debit", "2025-12-10", -100, "5812"),
+    transaction("december-late-fee", "2025-12-15", -10, "6012"),
+    transaction("january-debit", "2026-01-10", -100, "5812"),
     transaction("small-essential", "2026-01-15", -100, "4900"),
+    transaction("february-savings", "2026-02-10", 50, "6540"),
     transaction("window-end", "2026-02-20", 100),
     transaction("after-window", "2026-02-21", 100),
   ]);
@@ -81,6 +85,9 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     userId: account.user_id,
     from: "2026-02-20",
     incomeCategoryCodes: ["9001", "9002"],
+    savingsCategoryCodes: ["6540"],
+    feeCategoryCodes: ["6012"],
+    highRiskCategoryCodes: ["7995", "6051"],
   } as const;
   const cases = [
     {
@@ -89,11 +96,16 @@ test("calculates reliability metrics from stored transactions", async (t) => {
       expected: {
         windowStart: "2025-09-01",
         windowEnd: "2026-02-20",
-        monthsWithIncome: 3,
-        incomeRegularity: 0.5,
-        incomeCoverageRatio: 1,
-        essentialPaymentsConsistency: 0.5,
-        incomeRegularityPoints: 13,
+        scoringWindowMonthCount: 6,
+        incomeMonthCount: 3,
+        totalIncomeCents: 30_000,
+        totalEssentialExpensesCents: 30_000,
+        essentialCategoryMonthCount: 3,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 2,
+        lateFeeEventCount: 1,
+        totalDebitCents: 56_000,
+        totalHighRiskDebitCents: 5_000,
       },
     },
     {
@@ -102,11 +114,16 @@ test("calculates reliability metrics from stored transactions", async (t) => {
       expected: {
         windowStart: "2025-12-01",
         windowEnd: "2026-02-20",
-        monthsWithIncome: 1,
-        incomeRegularity: 1 / 3,
-        incomeCoverageRatio: 0.5,
-        essentialPaymentsConsistency: 2 / 3,
-        incomeRegularityPoints: 8,
+        scoringWindowMonthCount: 3,
+        incomeMonthCount: 1,
+        totalIncomeCents: 15_000,
+        totalEssentialExpensesCents: 20_000,
+        essentialCategoryMonthCount: 2,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 1,
+        lateFeeEventCount: 1,
+        totalDebitCents: 31_000,
+        totalHighRiskDebitCents: 0,
       },
     },
     {
@@ -118,37 +135,74 @@ test("calculates reliability metrics from stored transactions", async (t) => {
       expected: {
         windowStart: "2025-09-01",
         windowEnd: "2026-02-20",
-        monthsWithIncome: 3,
-        incomeRegularity: 0.5,
-        incomeCoverageRatio: 0.75,
-        essentialPaymentsConsistency: 1 / 3,
-        incomeRegularityPoints: 13,
+        scoringWindowMonthCount: 6,
+        incomeMonthCount: 3,
+        totalIncomeCents: 30_000,
+        totalEssentialExpensesCents: 40_000,
+        essentialCategoryMonthCount: 4,
+        essentialCategoryCount: 2,
+        savingsMonthCount: 2,
+        lateFeeEventCount: 1,
+        totalDebitCents: 56_000,
+        totalHighRiskDebitCents: 5_000,
       },
     },
     {
-      name: "returns zero consistency for unobserved essential categories",
+      name: "returns zero facts for unobserved essential categories",
       args: { monthCount: 6, essentialCategoryCodes: ["9999"] },
       expected: {
         windowStart: "2025-09-01",
         windowEnd: "2026-02-20",
-        monthsWithIncome: 3,
-        incomeRegularity: 0.5,
-        incomeCoverageRatio: null,
-        essentialPaymentsConsistency: 0,
-        incomeRegularityPoints: 13,
+        scoringWindowMonthCount: 6,
+        incomeMonthCount: 3,
+        totalIncomeCents: 30_000,
+        totalEssentialExpensesCents: 0,
+        essentialCategoryMonthCount: 0,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 2,
+        lateFeeEventCount: 1,
+        totalDebitCents: 56_000,
+        totalHighRiskDebitCents: 5_000,
       },
     },
     {
-      name: "returns null metrics without essential category configuration",
+      name: "supports empty essential category configuration",
       args: { monthCount: 6, essentialCategoryCodes: [] },
       expected: {
         windowStart: "2025-09-01",
         windowEnd: "2026-02-20",
-        monthsWithIncome: 3,
-        incomeRegularity: 0.5,
-        incomeCoverageRatio: null,
-        essentialPaymentsConsistency: null,
-        incomeRegularityPoints: 13,
+        scoringWindowMonthCount: 6,
+        incomeMonthCount: 3,
+        totalIncomeCents: 30_000,
+        totalEssentialExpensesCents: 0,
+        essentialCategoryMonthCount: 0,
+        essentialCategoryCount: 0,
+        savingsMonthCount: 2,
+        lateFeeEventCount: 1,
+        totalDebitCents: 56_000,
+        totalHighRiskDebitCents: 5_000,
+      },
+    },
+    {
+      name: "returns zero debit facts without debit activity",
+      args: {
+        from: "2025-08-30",
+        monthCount: 1,
+        essentialCategoryCodes: ["5812"],
+      },
+      expected: {
+        windowStart: "2025-08-01",
+        windowEnd: "2025-08-30",
+        scoringWindowMonthCount: 1,
+        incomeMonthCount: 0,
+        totalIncomeCents: 0,
+        totalEssentialExpensesCents: 0,
+        essentialCategoryMonthCount: 0,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 0,
+        lateFeeEventCount: 0,
+        totalDebitCents: 0,
+        totalHighRiskDebitCents: 0,
       },
     },
   ] as const;
@@ -161,6 +215,34 @@ test("calculates reliability metrics from stored transactions", async (t) => {
       );
     });
   }
+
+  await t.test("counts essential category credits", () => {
+    saveTransactions([
+      transaction("october-essential-credit", "2025-10-16", 25, "5812"),
+    ]);
+
+    assert.deepEqual(
+      getReliabilityMetrics({
+        ...baseArgs,
+        monthCount: 6,
+        essentialCategoryCodes: ["5812"],
+      }),
+      {
+        windowStart: "2025-09-01",
+        windowEnd: "2026-02-20",
+        scoringWindowMonthCount: 6,
+        incomeMonthCount: 3,
+        totalIncomeCents: 32_500,
+        totalEssentialExpensesCents: 27_500,
+        essentialCategoryMonthCount: 4,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 2,
+        lateFeeEventCount: 1,
+        totalDebitCents: 56_000,
+        totalHighRiskDebitCents: 5_000,
+      },
+    );
+  });
 
   await t.test("rejects an invalid month count", () => {
     assert.throws(
