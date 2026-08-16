@@ -18,6 +18,23 @@ export type AccountDailyBalance = {
   endOfDayBalanceCents: number;
 };
 
+export type StoredUserAccount = {
+  id: string;
+  type: Account["type"];
+  balanceCents: number;
+};
+
+export type AccountNegativeBalanceDayCountsArgs = {
+  userId: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type AccountNegativeBalanceDayCount = {
+  accountId: string;
+  negativeBalanceDayCount: number;
+};
+
 export type ReliabilityMetricsArgs = {
   userId: string;
   from: string;
@@ -40,7 +57,7 @@ export type ReliabilityMetrics = {
   essentialCategoryCount: number;
   savingsMonthCount: number;
   lateFeeEventCount: number;
-  totalDebitCents: number;
+  totalSpendingDebitCents: number;
   totalHighRiskDebitCents: number;
 };
 
@@ -132,6 +149,23 @@ export function mkListAccountIds(args: DatabaseArgs) {
       .prepare("SELECT id FROM accounts WHERE user_id = ?")
       .pluck()
       .all(userId) as string[];
+  };
+}
+
+export function mkListUserAccounts(args: DatabaseArgs) {
+  const database = getDatabase(args.databaseFilePath);
+  const statement = database.prepare(`
+    SELECT
+      id,
+      type,
+      balance_cents AS "balanceCents"
+    FROM accounts
+    WHERE user_id = ?
+    ORDER BY id
+  `);
+
+  return (userId: string): StoredUserAccount[] => {
+    return statement.all(userId) as StoredUserAccount[];
   };
 }
 
@@ -258,6 +292,30 @@ export function mkListAccountDailyBalances(args: DatabaseArgs) {
   };
 }
 
+export function mkListAccountNegativeBalanceDayCounts(args: DatabaseArgs) {
+  const listUserAccounts = mkListUserAccounts(args);
+  const listAccountDailyBalances = mkListAccountDailyBalances(args);
+
+  return ({
+    userId,
+    startDate,
+    endDate,
+  }: AccountNegativeBalanceDayCountsArgs): AccountNegativeBalanceDayCount[] => {
+    return listUserAccounts(userId)
+      .filter((account) => account.type === "checking")
+      .map((account) => ({
+        accountId: account.id,
+        negativeBalanceDayCount: listAccountDailyBalances({
+          accountId: account.id,
+          startDate,
+          endDate,
+          closingBalanceCents: account.balanceCents,
+        }).filter(({ endOfDayBalanceCents }) => endOfDayBalanceCents < 0)
+          .length,
+      }));
+  };
+}
+
 export function mkGetReliabilityMetrics(args: DatabaseArgs) {
   const database = getDatabase(args.databaseFilePath);
   const statement = database.prepare(`
@@ -305,11 +363,20 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         t.transaction_date,
         t.amount_cents,
         t.merchant_category_code,
-        t.type = 'debit' AS is_debit,
-        t.type = 'credit'
+        (
+          t.type = 'credit'
           OR t.merchant_category_code IN (
             SELECT code FROM income_category_codes
+          )
+        )
+          AND t.merchant_category_code NOT IN (
+            SELECT code FROM savings_category_codes
           ) AS is_income,
+        t.type = 'debit'
+          AND t.merchant_category_code NOT IN (
+            SELECT code FROM savings_category_codes
+          ) AS is_spending_debit,
+        t.type = 'debit' AS is_debit,
         t.merchant_category_code IN (
           SELECT code FROM essential_category_codes
         ) AS is_essential_expense,
@@ -355,9 +422,9 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
           FILTER (WHERE is_late_fee) AS late_fee_events,
         COALESCE(
           SUM(-amount_cents)
-            FILTER (WHERE is_debit),
+            FILTER (WHERE is_spending_debit),
           0
-        ) AS total_debit_cents,
+        ) AS total_spending_debit_cents,
         COALESCE(
           SUM(-amount_cents)
             FILTER (WHERE is_debit AND is_high_risk),
@@ -377,7 +444,7 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         AS "essentialCategoryMonthCount",
       metrics.months_with_savings AS "savingsMonthCount",
       metrics.late_fee_events AS "lateFeeEventCount",
-      metrics.total_debit_cents AS "totalDebitCents",
+      metrics.total_spending_debit_cents AS "totalSpendingDebitCents",
       metrics.high_risk_debit_cents AS "totalHighRiskDebitCents"
     FROM scoring_window
     CROSS JOIN metrics

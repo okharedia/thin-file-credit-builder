@@ -9,6 +9,8 @@ import type { Account, Transaction } from "../src/banking/index.js";
 import {
   mkCloseDatabase,
   mkListAccountDailyBalances,
+  mkListAccountNegativeBalanceDayCounts,
+  mkListUserAccounts,
   mkSaveAccounts,
   mkSaveTransactions,
 } from "../src/database.js";
@@ -18,8 +20,26 @@ const account: Account = {
   user_id: "user-1",
   type: "checking",
   currency: "EUR",
-  balance: 100,
+  balance: 2,
   name: "Checking",
+};
+
+const secondCheckingAccount: Account = {
+  id: "account-2",
+  user_id: account.user_id,
+  type: "checking",
+  currency: "EUR",
+  balance: -1,
+  name: "Second checking",
+};
+
+const savingsAccount: Account = {
+  id: "savings-account",
+  user_id: account.user_id,
+  type: "savings",
+  currency: "EUR",
+  balance: -1,
+  name: "Savings",
 };
 
 function transaction(
@@ -57,13 +77,16 @@ test("reconstructs daily account balances from the closing balance", async (t) =
   const saveTransactions = mkSaveTransactions(databaseArgs);
   const listAccountDailyBalances =
     mkListAccountDailyBalances(databaseArgs);
+  const listUserAccounts = mkListUserAccounts(databaseArgs);
+  const listAccountNegativeBalanceDayCounts =
+    mkListAccountNegativeBalanceDayCounts(databaseArgs);
 
   t.after(() => {
     closeDatabase();
     rmSync(testDirectory, { recursive: true, force: true });
   });
 
-  saveAccounts([account]);
+  saveAccounts([account, secondCheckingAccount, savingsAccount]);
   saveTransactions([
     transaction("before-window", "2025-12-31", -100),
     transaction("january-1", "2026-01-01", -100),
@@ -121,6 +144,27 @@ test("reconstructs daily account balances from the closing balance", async (t) =
       {
         day: "2026-01-01",
         endOfDayBalanceCents: -50,
+      },
+    ],
+  );
+
+  assert.deepEqual(listUserAccounts(account.user_id), [
+    { id: account.id, type: "checking", balanceCents: 200 },
+    { id: secondCheckingAccount.id, type: "checking", balanceCents: -100 },
+    { id: savingsAccount.id, type: "savings", balanceCents: -100 },
+  ]);
+
+  assert.deepEqual(
+    listAccountNegativeBalanceDayCounts({
+      userId: account.user_id,
+      startDate: "2026-01-01",
+      endDate: "2026-01-05",
+    }),
+    [
+      { accountId: account.id, negativeBalanceDayCount: 3 },
+      {
+        accountId: secondCheckingAccount.id,
+        negativeBalanceDayCount: 5,
       },
     ],
   );
