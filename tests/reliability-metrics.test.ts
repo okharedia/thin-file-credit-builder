@@ -84,7 +84,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
 
   const baseArgs = {
     userId: account.user_id,
-    from: "2026-02-20",
+    startDate: "2025-09-01",
+    endDate: "2026-02-20",
     incomeCategoryCodes: ["9001", "9002"],
     savingsCategoryCodes: ["6540"],
     feeCategoryCodes: ["6012"],
@@ -93,11 +94,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
   const cases = [
     {
       name: "calculates six-month metrics",
-      args: { monthCount: 6, essentialCategoryCodes: ["5812"] },
+      args: { essentialCategoryCodes: ["5812"] },
       expected: {
-        windowStart: "2025-09-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 6,
         incomeMonthCount: 3,
         totalIncomeCents: 20_000,
         totalEssentialExpensesCents: 30_000,
@@ -111,11 +109,11 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     },
     {
       name: "supports a shorter scoring window",
-      args: { monthCount: 3, essentialCategoryCodes: ["5812"] },
+      args: {
+        startDate: "2025-12-01",
+        essentialCategoryCodes: ["5812"],
+      },
       expected: {
-        windowStart: "2025-12-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 3,
         incomeMonthCount: 1,
         totalIncomeCents: 10_000,
         totalEssentialExpensesCents: 20_000,
@@ -130,13 +128,9 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     {
       name: "uses every essential category in the denominator",
       args: {
-        monthCount: 6,
         essentialCategoryCodes: ["5812", "4900"],
       },
       expected: {
-        windowStart: "2025-09-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 6,
         incomeMonthCount: 3,
         totalIncomeCents: 20_000,
         totalEssentialExpensesCents: 40_000,
@@ -150,11 +144,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     },
     {
       name: "returns zero facts for unobserved essential categories",
-      args: { monthCount: 6, essentialCategoryCodes: ["9999"] },
+      args: { essentialCategoryCodes: ["9999"] },
       expected: {
-        windowStart: "2025-09-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 6,
         incomeMonthCount: 3,
         totalIncomeCents: 20_000,
         totalEssentialExpensesCents: 0,
@@ -168,11 +159,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     },
     {
       name: "supports empty essential category configuration",
-      args: { monthCount: 6, essentialCategoryCodes: [] },
+      args: { essentialCategoryCodes: [] },
       expected: {
-        windowStart: "2025-09-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 6,
         incomeMonthCount: 3,
         totalIncomeCents: 20_000,
         totalEssentialExpensesCents: 0,
@@ -187,14 +175,11 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     {
       name: "returns zero debit facts without debit activity",
       args: {
-        from: "2025-08-30",
-        monthCount: 1,
+        startDate: "2025-08-01",
+        endDate: "2025-08-30",
         essentialCategoryCodes: ["5812"],
       },
       expected: {
-        windowStart: "2025-08-01",
-        windowEnd: "2025-08-30",
-        scoringWindowMonthCount: 1,
         incomeMonthCount: 0,
         totalIncomeCents: 0,
         totalEssentialExpensesCents: 0,
@@ -220,7 +205,6 @@ test("calculates reliability metrics from stored transactions", async (t) => {
   await t.test("excludes savings transfers from high-risk spending", () => {
     const metrics = getReliabilityMetrics({
       ...baseArgs,
-      monthCount: 6,
       essentialCategoryCodes: ["5812"],
       highRiskCategoryCodes: ["7995", "6540"],
     });
@@ -236,13 +220,9 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     assert.deepEqual(
       getReliabilityMetrics({
         ...baseArgs,
-        monthCount: 6,
         essentialCategoryCodes: ["5812"],
       }),
       {
-        windowStart: "2025-09-01",
-        windowEnd: "2026-02-20",
-        scoringWindowMonthCount: 6,
         incomeMonthCount: 3,
         totalIncomeCents: 22_500,
         totalEssentialExpensesCents: 27_500,
@@ -253,18 +233,6 @@ test("calculates reliability metrics from stored transactions", async (t) => {
         totalSpendingDebitCents: 56_000,
         totalHighRiskDebitCents: 5_000,
       },
-    );
-  });
-
-  await t.test("rejects an invalid month count", () => {
-    assert.throws(
-      () =>
-        getReliabilityMetrics({
-          ...baseArgs,
-          monthCount: 0,
-          essentialCategoryCodes: [],
-        }),
-      new RangeError("monthCount must be a positive integer"),
     );
   });
 });

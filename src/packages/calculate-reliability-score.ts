@@ -3,10 +3,12 @@ import type {
   ReliabilityMetrics,
 } from "../database.js";
 
-type IncomeRegularityMetrics = Pick<
-  ReliabilityMetrics,
-  "incomeMonthCount" | "scoringWindowMonthCount"
->;
+type ScoringWindowMonthCount = {
+  scoringWindowMonthCount: number;
+};
+
+type IncomeRegularityMetrics = Pick<ReliabilityMetrics, "incomeMonthCount">
+  & ScoringWindowMonthCount;
 
 type IncomeCoverageMetrics = Pick<
   ReliabilityMetrics,
@@ -15,15 +17,11 @@ type IncomeCoverageMetrics = Pick<
 
 type EssentialPaymentsConsistencyMetrics = Pick<
   ReliabilityMetrics,
-  | "essentialCategoryMonthCount"
-  | "essentialCategoryCount"
-  | "scoringWindowMonthCount"
->;
+  "essentialCategoryMonthCount" | "essentialCategoryCount"
+> & ScoringWindowMonthCount;
 
-type SavingsBehaviorMetrics = Pick<
-  ReliabilityMetrics,
-  "savingsMonthCount" | "scoringWindowMonthCount"
->;
+type SavingsBehaviorMetrics = Pick<ReliabilityMetrics, "savingsMonthCount">
+  & ScoringWindowMonthCount;
 
 type NegativeBalanceMetrics = {
   negativeBalanceDayCount: number;

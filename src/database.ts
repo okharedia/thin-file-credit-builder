@@ -37,8 +37,8 @@ export type AccountNegativeBalanceDayCount = {
 
 export type ReliabilityMetricsArgs = {
   userId: string;
-  from: string;
-  monthCount: number;
+  startDate: string;
+  endDate: string;
   incomeCategoryCodes: readonly string[];
   essentialCategoryCodes: readonly string[];
   savingsCategoryCodes: readonly string[];
@@ -47,9 +47,6 @@ export type ReliabilityMetricsArgs = {
 };
 
 export type ReliabilityMetrics = {
-  windowStart: string;
-  windowEnd: string;
-  scoringWindowMonthCount: number;
   incomeMonthCount: number;
   totalIncomeCents: number;
   totalEssentialExpensesCents: number;
@@ -320,24 +317,6 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
   const database = getDatabase(args.databaseFilePath);
   const statement = database.prepare(`
     WITH
-    configuration AS (
-      SELECT
-        @userId AS user_id,
-        @from AS window_end,
-        @monthCount AS month_count
-    ),
-    scoring_window AS (
-      SELECT
-        user_id,
-        window_end,
-        month_count,
-        date(
-          window_end,
-          'start of month',
-          printf('-%d months', month_count - 1)
-        ) AS window_start
-      FROM configuration
-    ),
     income_category_codes AS (
       SELECT CAST(value AS TEXT) AS code
       FROM json_each(@incomeCategoryCodesJson)
@@ -388,13 +367,11 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         t.merchant_category_code IN (
           SELECT code FROM high_risk_category_codes
         ) AS is_high_risk
-      FROM scoring_window
-      JOIN accounts AS a
-        ON a.user_id = scoring_window.user_id
+      FROM accounts AS a
       JOIN transactions AS t
         ON t.account_id = a.id
-      WHERE t.transaction_date
-        BETWEEN scoring_window.window_start AND scoring_window.window_end
+      WHERE a.user_id = @userId
+        AND t.transaction_date BETWEEN @startDate AND @endDate
     ),
     metrics AS (
       SELECT
@@ -432,9 +409,6 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
       FROM flagged_transactions
     )
     SELECT
-      scoring_window.window_start AS "windowStart",
-      scoring_window.window_end AS "windowEnd",
-      scoring_window.month_count AS "scoringWindowMonthCount",
       metrics.months_with_income AS "incomeMonthCount",
       metrics.total_income_cents AS "totalIncomeCents",
       metrics.total_essential_expenses_cents
@@ -445,28 +419,23 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
       metrics.late_fee_events AS "lateFeeEventCount",
       metrics.total_spending_debit_cents AS "totalSpendingDebitCents",
       metrics.high_risk_debit_cents AS "totalHighRiskDebitCents"
-    FROM scoring_window
-    CROSS JOIN metrics
+    FROM metrics
   `);
 
   return ({
     userId,
-    from,
-    monthCount,
+    startDate,
+    endDate,
     incomeCategoryCodes,
     essentialCategoryCodes,
     savingsCategoryCodes,
     feeCategoryCodes,
     highRiskCategoryCodes,
   }: ReliabilityMetricsArgs): ReliabilityMetrics => {
-    if (!Number.isSafeInteger(monthCount) || monthCount < 1) {
-      throw new RangeError("monthCount must be a positive integer");
-    }
-
     const metrics = statement.get({
       userId,
-      from,
-      monthCount,
+      startDate,
+      endDate,
       incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
       essentialCategoryCodesJson: JSON.stringify(essentialCategoryCodes),
       savingsCategoryCodesJson: JSON.stringify(savingsCategoryCodes),

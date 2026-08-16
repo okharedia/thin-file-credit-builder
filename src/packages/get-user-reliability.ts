@@ -14,6 +14,7 @@ import {
   calculateReliabilityScore,
   sumNegativeBalanceDayCounts,
 } from "./calculate-reliability-score.js";
+import { getScoringWindow } from "./scoring-window.js";
 
 const SCORING_WINDOW_MONTH_COUNT = 6;
 
@@ -55,9 +56,9 @@ function buildDrivers(
     metrics.totalSpendingDebitCents,
   );
   const drivers = [
-    `Income present in ${metrics.incomeMonthCount}/${metrics.scoringWindowMonthCount} months`,
+    `Income present in ${metrics.incomeMonthCount}/${SCORING_WINDOW_MONTH_COUNT} months`,
     `Income covers essential expenses (${incomeCoverageRatio.toFixed(2)}x)`,
-    `Savings activity in ${metrics.savingsMonthCount}/${metrics.scoringWindowMonthCount} months`,
+    `Savings activity in ${metrics.savingsMonthCount}/${SCORING_WINDOW_MONTH_COUNT} months`,
   ];
 
   if (negativeBalanceDayCount > 0) {
@@ -87,11 +88,15 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
   const listMerchantCategories = mkListMerchantCategories(args);
 
   return async (userId: string, from: string) => {
+    const { startDate, endDate } = getScoringWindow(
+      from,
+      SCORING_WINDOW_MONTH_COUNT,
+    );
     const categories = await listMerchantCategories();
     const metrics = getReliabilityMetrics({
       userId,
-      from,
-      monthCount: SCORING_WINDOW_MONTH_COUNT,
+      startDate,
+      endDate,
       incomeCategoryCodes: codesInGroup(categories, "income"),
       essentialCategoryCodes: codesInGroup(categories, "essential"),
       savingsCategoryCodes: codesInGroup(categories, "savings"),
@@ -101,26 +106,27 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
     const checkingAccountNegativeBalanceDayCounts =
       listAccountNegativeBalanceDayCounts({
         userId,
-        startDate: metrics.windowStart,
-        endDate: metrics.windowEnd,
+        startDate,
+        endDate,
       });
     const negativeBalanceDayCount = sumNegativeBalanceDayCounts(
       checkingAccountNegativeBalanceDayCounts,
     );
     const reliabilityIndex = calculateReliabilityScore({
       ...metrics,
+      scoringWindowMonthCount: SCORING_WINDOW_MONTH_COUNT,
       checkingAccountNegativeBalanceDayCounts,
     });
     const incomeRegularity = ratio(
       metrics.incomeMonthCount,
-      metrics.scoringWindowMonthCount,
+      SCORING_WINDOW_MONTH_COUNT,
     );
     const incomeCoverageRatio = ratio(
       metrics.totalIncomeCents,
       metrics.totalEssentialExpensesCents,
     );
     const possibleEssentialCategoryMonthCount =
-      metrics.scoringWindowMonthCount * metrics.essentialCategoryCount;
+      SCORING_WINDOW_MONTH_COUNT * metrics.essentialCategoryCount;
     const essentialPaymentsConsistency = ratio(
       metrics.essentialCategoryMonthCount,
       possibleEssentialCategoryMonthCount,
