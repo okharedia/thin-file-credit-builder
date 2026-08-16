@@ -376,7 +376,6 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
           AND t.merchant_category_code NOT IN (
             SELECT code FROM savings_category_codes
           ) AS is_spending_debit,
-        t.type = 'debit' AS is_debit,
         t.merchant_category_code IN (
           SELECT code FROM essential_category_codes
         ) AS is_essential_expense,
@@ -427,7 +426,7 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         ) AS total_spending_debit_cents,
         COALESCE(
           SUM(-amount_cents)
-            FILTER (WHERE is_debit AND is_high_risk),
+            FILTER (WHERE is_spending_debit AND is_high_risk),
           0
         ) AS high_risk_debit_cents
       FROM flagged_transactions

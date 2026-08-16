@@ -217,6 +217,17 @@ test("calculates reliability metrics from stored transactions", async (t) => {
     });
   }
 
+  await t.test("excludes savings transfers from high-risk spending", () => {
+    const metrics = getReliabilityMetrics({
+      ...baseArgs,
+      monthCount: 6,
+      essentialCategoryCodes: ["5812"],
+      highRiskCategoryCodes: ["7995", "6540"],
+    });
+
+    assert.equal(metrics.totalHighRiskDebitCents, 5_000);
+  });
+
   await t.test("counts essential category credits", () => {
     saveTransactions([
       transaction("october-essential-credit", "2025-10-16", 25, "5812"),
