@@ -6,19 +6,34 @@ export type DatabaseArgs = {
   databaseFilePath: string;
 };
 
-export type IncomeRegularityArgs = {
+export type AccountDailyBalancesArgs = {
+  accountId: string;
+  startDate: string;
+  endDate: string;
+  closingBalanceCents: number;
+};
+
+export type AccountDailyBalance = {
+  day: string;
+  endOfDayBalanceCents: number;
+};
+
+export type ReliabilityMetricsArgs = {
   userId: string;
   from: string;
   monthCount: number;
   incomeCategoryCodes: readonly string[];
+  essentialCategoryCodes: readonly string[];
 };
 
-export type IncomeRegularity = {
+export type ReliabilityMetrics = {
   windowStart: string;
   windowEnd: string;
   monthsWithIncome: number;
   incomeRegularity: number;
-  points: number;
+  incomeCoverageRatio: number | null;
+  essentialPaymentsConsistency: number | null;
+  incomeRegularityPoints: number;
 };
 
 let database: Database.Database | undefined;
@@ -160,7 +175,82 @@ export function mkSaveTransactions(args: DatabaseArgs) {
   };
 }
 
-export function mkGetIncomeRegularity(args: DatabaseArgs) {
+export function mkListAccountDailyBalances(args: DatabaseArgs) {
+  const database = getDatabase(args.databaseFilePath);
+  const statement = database.prepare(`
+    WITH RECURSIVE
+    configuration AS (
+      SELECT
+        date(@startDate) AS start_date,
+        date(@endDate) AS end_date
+    ),
+    days(day) AS (
+      SELECT start_date
+      FROM configuration
+      WHERE start_date <= end_date
+
+      UNION ALL
+
+      SELECT date(day, '+1 day')
+      FROM days
+      CROSS JOIN configuration
+      WHERE day < end_date
+    ),
+    daily_transactions AS (
+      SELECT
+        t.transaction_date AS day,
+        SUM(t.amount_cents) AS daily_net_cents
+      FROM transactions AS t
+      CROSS JOIN configuration
+      WHERE t.account_id = @accountId
+        AND t.transaction_date BETWEEN start_date AND end_date
+      GROUP BY t.transaction_date
+    ),
+    daily AS (
+      SELECT
+        days.day,
+        COALESCE(daily_transactions.daily_net_cents, 0)
+          AS daily_net_cents
+      FROM days
+      LEFT JOIN daily_transactions
+        ON daily_transactions.day = days.day
+    ),
+    balances AS (
+      SELECT
+        daily.day,
+        @closingBalanceCents
+          - COALESCE(
+              SUM(daily.daily_net_cents) OVER (
+                ORDER BY daily.day DESC
+                ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+              ),
+              0
+            ) AS end_of_day_balance_cents
+      FROM daily
+    )
+    SELECT
+      day,
+      end_of_day_balance_cents AS "endOfDayBalanceCents"
+    FROM balances
+    ORDER BY day
+  `);
+
+  return ({
+    accountId,
+    startDate,
+    endDate,
+    closingBalanceCents,
+  }: AccountDailyBalancesArgs): AccountDailyBalance[] => {
+    return statement.all({
+      accountId,
+      startDate,
+      endDate,
+      closingBalanceCents,
+    }) as AccountDailyBalance[];
+  };
+}
+
+export function mkGetReliabilityMetrics(args: DatabaseArgs) {
   const database = getDatabase(args.databaseFilePath);
   const statement = database.prepare(`
     WITH
@@ -172,7 +262,9 @@ export function mkGetIncomeRegularity(args: DatabaseArgs) {
     ),
     scoring_window AS (
       SELECT
-        *,
+        user_id,
+        window_end,
+        month_count,
         date(
           window_end,
           'start of month',
@@ -184,8 +276,23 @@ export function mkGetIncomeRegularity(args: DatabaseArgs) {
       SELECT CAST(value AS TEXT) AS code
       FROM json_each(@incomeCategoryCodesJson)
     ),
-    income_transactions AS (
-      SELECT t.transaction_date
+    essential_category_codes AS (
+      SELECT CAST(value AS TEXT) AS code
+      FROM json_each(@essentialCategoryCodesJson)
+    ),
+    scoring_transactions AS (
+      SELECT
+        t.transaction_date,
+        t.amount_cents,
+        t.merchant_category_code,
+        t.type = 'credit'
+          OR t.merchant_category_code IN (
+            SELECT code FROM income_category_codes
+          ) AS is_income,
+        t.type = 'debit'
+          AND t.merchant_category_code IN (
+            SELECT code FROM essential_category_codes
+          ) AS is_essential_expense
       FROM scoring_window
       JOIN accounts AS a
         ON a.user_id = scoring_window.user_id
@@ -193,33 +300,61 @@ export function mkGetIncomeRegularity(args: DatabaseArgs) {
         ON t.account_id = a.id
       WHERE t.transaction_date
         BETWEEN scoring_window.window_start AND scoring_window.window_end
-        AND (
-          t.type = 'credit'
-          OR t.merchant_category_code IN (
-            SELECT code FROM income_category_codes
-          )
-        )
     ),
-    income_summary AS (
+    metric_totals AS (
       SELECT
         COUNT(DISTINCT substr(transaction_date, 1, 7))
-          AS months_with_income
-      FROM income_transactions
+          FILTER (WHERE is_income) AS months_with_income,
+        COALESCE(
+          SUM(amount_cents)
+            FILTER (WHERE amount_cents > 0 AND is_income),
+          0
+        ) AS total_income_cents,
+        COALESCE(
+          SUM(-amount_cents)
+            FILTER (WHERE is_essential_expense),
+          0
+        ) AS total_essential_expenses_cents,
+        COUNT(
+          DISTINCT merchant_category_code || ':' || substr(transaction_date, 1, 7)
+        ) FILTER (WHERE is_essential_expense) AS essential_category_months
+      FROM scoring_transactions
+    ),
+    essential_category_summary AS (
+      SELECT COUNT(DISTINCT code) AS essential_category_count
+      FROM essential_category_codes
+    ),
+    metrics AS (
+      SELECT
+        metric_totals.months_with_income,
+        metric_totals.essential_category_months,
+        essential_category_summary.essential_category_count,
+        metric_totals.total_income_cents * 1.0
+          / NULLIF(metric_totals.total_essential_expenses_cents, 0)
+          AS income_coverage_ratio
+      FROM metric_totals
+      CROSS JOIN essential_category_summary
     )
     SELECT
       scoring_window.window_start AS "windowStart",
       scoring_window.window_end AS "windowEnd",
-      income_summary.months_with_income AS "monthsWithIncome",
-      income_summary.months_with_income * 1.0
+      metrics.months_with_income AS "monthsWithIncome",
+      metrics.months_with_income * 1.0
         / scoring_window.month_count AS "incomeRegularity",
+      metrics.income_coverage_ratio AS "incomeCoverageRatio",
+      metrics.essential_category_months * 1.0
+        / NULLIF(
+          scoring_window.month_count * metrics.essential_category_count,
+          0
+        ) AS "essentialPaymentsConsistency",
       CAST(
         ROUND(
-          income_summary.months_with_income * 25.0
+          metrics.months_with_income * 25.0
             / scoring_window.month_count
         ) AS INTEGER
-      ) AS points
+      ) AS "incomeRegularityPoints"
     FROM scoring_window
-    CROSS JOIN income_summary
+    CROSS JOIN metrics
   `);
 
   return ({
@@ -227,7 +362,8 @@ export function mkGetIncomeRegularity(args: DatabaseArgs) {
     from,
     monthCount,
     incomeCategoryCodes,
-  }: IncomeRegularityArgs): IncomeRegularity => {
+    essentialCategoryCodes,
+  }: ReliabilityMetricsArgs): ReliabilityMetrics => {
     if (!Number.isSafeInteger(monthCount) || monthCount < 1) {
       throw new RangeError("monthCount must be a positive integer");
     }
@@ -237,6 +373,7 @@ export function mkGetIncomeRegularity(args: DatabaseArgs) {
       from,
       monthCount,
       incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
-    }) as IncomeRegularity;
+      essentialCategoryCodesJson: JSON.stringify(essentialCategoryCodes),
+    }) as ReliabilityMetrics;
   };
 }
