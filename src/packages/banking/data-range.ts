@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { isoDateSchema } from "../iso-date.js";
+import { isoDateSchema } from "../utils/iso-date.js";
 import { bankingApiGet } from "./client.js";
 import type { BankingArgs } from "./index.js";
 

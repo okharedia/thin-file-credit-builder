@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { test } from "node:test";
 import { parseISO } from "date-fns";
 import { buildApp } from "../src/app.js";
-import type { Account, Transaction } from "../src/banking/index.js";
+import type { Account, Transaction } from "../src/packages/banking/index.js";
 import { mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
 
@@ -126,7 +126,7 @@ test("returns the reliability score response", async (t) =>
                         negative_balance_days: 0,
                         late_fee_events: 1,
                 },
-                drivers: ["Income present in 5/6 months", "Income covers essential expenses (1.67x)", "Savings activity in 4/6 months", "1 late fee event", "High-risk spending was 14% of spending"],
+                drivers: ["Income present in 5/6 months", "Income covers essential expenses (1.67x)", "Savings activity in 4/6 months", "1 late fee event(s)", "High-risk spending was 14% of spending"],
         });
 
         const invalidResponse = await app.inject({

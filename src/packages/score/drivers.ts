@@ -1,9 +1,12 @@
-import type { ReliabilityMetrics } from "../database.js";
-import { ratio } from "./ratio.js";
+import type { ReliabilityMetrics } from "../../database.js";
+import { ratio } from "../utils/ratio.js";
 
-export function buildDrivers(metrics: ReliabilityMetrics, incomeCoverageRatio: number, negativeBalanceDayCount: number, scoringWindowMonthCount: number): string[]
+export function buildDrivers(metrics: ReliabilityMetrics, negativeBalanceDayCount: number, scoringWindowMonthCount: number): string[]
 {
         const highRiskSpendingRatio = ratio(metrics.totalHighRiskDebitCents, metrics.totalSpendingDebitCents);
+
+        const incomeCoverageRatio = ratio(metrics.totalIncomeCents, metrics.totalEssentialExpensesCents);
+
         const drivers = [`Income present in ${metrics.incomeMonthCount}/${scoringWindowMonthCount} months`, `Income covers essential expenses (${incomeCoverageRatio.toFixed(2)}x)`, `Savings activity in ${metrics.savingsMonthCount}/${scoringWindowMonthCount} months`];
 
         if (negativeBalanceDayCount > 0)
@@ -13,9 +16,7 @@ export function buildDrivers(metrics: ReliabilityMetrics, incomeCoverageRatio: n
 
         if (metrics.lateFeeEventCount > 0)
         {
-                const event = metrics.lateFeeEventCount === 1 ? "event" : "events";
-
-                drivers.push(`${metrics.lateFeeEventCount} late fee ${event}`);
+                drivers.push(`${metrics.lateFeeEventCount} late fee event(s)`);
         }
 
         if (metrics.totalHighRiskDebitCents > 0)

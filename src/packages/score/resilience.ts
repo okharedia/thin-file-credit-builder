@@ -13,10 +13,9 @@ export type ResilienceMetrics = Pick<ReliabilityMetrics, "savingsMonthCount" | "
  * late fee points = −min(late fee event count, 5)
  * high-risk points = −round((high-risk debit total / spending debit total) × 5)
  *
- * A month counts once when it contains at least one positive savings
- * transaction, regardless of the number or value of those transactions.
- * negative balance day count = sum of each checking account's negative days
- * With no spending, there is no high-risk proportion and the adjustment is zero.
+ * Negative-balance days and late-fee events are capped so a long overdraft
+ * streak or a burst of fees cannot dominate this component. With no spending,
+ * there is no high-risk proportion and the adjustment is zero.
  */
 export function calculateResiliencePoints(
         {
@@ -27,13 +26,17 @@ export function calculateResiliencePoints(
                 totalHighRiskDebitCents,
                 totalSpendingDebitCents,
         }: ResilienceMetrics,
-): number
+)
 {
         const savingsBehaviorPoints = Math.round((savingsMonthCount / scoringWindowMonthCount) * 25);
-        const negativeBalancePoints = negativeBalanceDayCount === 0 ? 0 : -Math.min(negativeBalanceDayCount, 10);
-        const lateFeePoints = lateFeeEventCount === 0 ? 0 : -Math.min(lateFeeEventCount, 5);
-        const highRiskPenalty = totalSpendingDebitCents === 0 ? 0 : Math.round((totalHighRiskDebitCents / totalSpendingDebitCents) * 5);
-        const highRiskSpendingPoints = highRiskPenalty === 0 ? 0 : -highRiskPenalty;
 
+        const negativeBalancePoints = -Math.min(negativeBalanceDayCount, 10);
+
+        const lateFeePoints = -Math.min(lateFeeEventCount, 5);
+
+        const highRiskSpendingPoints = totalSpendingDebitCents > 0 ? -Math.round((totalHighRiskDebitCents / totalSpendingDebitCents) * 5) : 0;
+
+        //
+        // final score
         return savingsBehaviorPoints + negativeBalancePoints + lateFeePoints + highRiskSpendingPoints;
 }

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { test } from "node:test";
 import { parseISO } from "date-fns";
-import type { Account, Transaction } from "../src/banking/index.js";
+import type { Account, Transaction } from "../src/packages/banking/index.js";
 import { mkCloseDatabase, mkGetReliabilityMetrics, mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
 

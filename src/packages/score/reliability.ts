@@ -13,7 +13,7 @@ import { calculateResiliencePoints, type ResilienceMetrics } from "./resilience.
  */
 export function calculateReliabilityScore(metrics: Pick<ReliabilityMetrics, "incomeMonthCount" | "totalIncomeCents" | "totalEssentialExpensesCents" | "essentialCategoryMonthCount" | "essentialCategoryCount"> & ResilienceMetrics)
 {
-        const score = +calculateIncomeRegularityPoints(metrics) + calculateIncomeCoveragePoints(metrics) + calculateEssentialPaymentsConsistencyPoints(metrics) + calculateResiliencePoints(metrics);
+        const score = calculateIncomeRegularityPoints(metrics) + calculateIncomeCoveragePoints(metrics) + calculateEssentialPaymentsConsistencyPoints(metrics) + calculateResiliencePoints(metrics);
 
         return Math.min(Math.max(score, 0), 100);
 }

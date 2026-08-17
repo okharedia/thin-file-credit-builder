@@ -16,7 +16,7 @@ export function calculateIncomeCoveragePoints(
                 totalIncomeCents,
                 totalEssentialExpensesCents,
         }: Pick<ReliabilityMetrics, "totalIncomeCents" | "totalEssentialExpensesCents">,
-): number
+)
 {
         if (totalIncomeCents <= 0 || totalEssentialExpensesCents <= 0)
         {
@@ -24,7 +24,6 @@ export function calculateIncomeCoveragePoints(
         }
 
         const incomeCoverageRatio = totalIncomeCents / totalEssentialExpensesCents;
-        const cappedCoverageRatio = Math.min(incomeCoverageRatio, 2);
 
-        return Math.round((cappedCoverageRatio / 2) * 25);
+        return Math.round((Math.min(incomeCoverageRatio, 2) / 2) * 25);
 }

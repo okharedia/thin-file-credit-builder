@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseISO } from "date-fns";
-import { getScoringWindow } from "../src/packages/scoring-window.js";
+import { getScoringWindow } from "../src/packages/utils/scoring-window.js";
 
 test("derives an inclusive calendar-month scoring window", () =>
 {
