@@ -2,7 +2,8 @@ import { mkGetDataRange, mkGetTransactionPage, mkListAccounts, type BankingArgs 
 import { mkListAccountIds, mkSaveAccounts, mkSaveTransactions, type DatabaseArgs } from "../database.js";
 import { formatIsoDate } from "../iso-date.js";
 
-export function mkSyncUser(args: BankingArgs & DatabaseArgs) {
+export function mkSyncUser(args: BankingArgs & DatabaseArgs)
+{
         const getDataRange = mkGetDataRange(args);
         const getTransactionPage = mkGetTransactionPage(args);
         const listAccounts = mkListAccounts(args);
@@ -10,18 +11,21 @@ export function mkSyncUser(args: BankingArgs & DatabaseArgs) {
         const saveAccounts = mkSaveAccounts(args);
         const saveTransactions = mkSaveTransactions(args);
 
-        return async (userId: string) => {
+        return async (userId: string) =>
+        {
                 const [accounts, dataRange] = await Promise.all([listAccounts(userId), getDataRange()]);
 
                 saveAccounts(accounts);
 
                 const pageTotals = await Promise.all(
-                        listAccountIds(userId).map(async (accountId) => {
+                        listAccountIds(userId).map(async (accountId) =>
+                        {
                                 let newTransactions = 0;
                                 let duplicateTransactions = 0;
                                 let cursor: string | undefined;
 
-                                do {
+                                do
+                                {
                                         const page = await getTransactionPage(accountId, dataRange, cursor);
                                         const inserted = saveTransactions(page.transactions);
 

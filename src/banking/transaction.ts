@@ -25,14 +25,24 @@ const transactionPageSchema = z.object({
 
 export type TransactionPage = z.infer<typeof transactionPageSchema>;
 
-export function mkGetTransactionPage(args: BankingArgs) {
-        return async (accountId: string, { from, to }: DataRange, cursor?: string) => {
+export function mkGetTransactionPage(args: BankingArgs)
+{
+        return async (
+                accountId: string,
+                {
+                        from,
+                        to,
+                }: DataRange,
+                cursor?: string,
+        ) =>
+        {
                 const url = new URL(`/accounts/${encodeURIComponent(accountId)}/transactions`, args.bankingApiBaseUrl);
 
                 url.searchParams.set("from", formatIsoDate(from));
                 url.searchParams.set("to", formatIsoDate(to));
 
-                if (cursor) {
+                if (cursor)
+                {
                         url.searchParams.set("cursor", cursor);
                 }
 

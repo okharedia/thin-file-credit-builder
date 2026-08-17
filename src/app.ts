@@ -18,26 +18,31 @@ const reliabilityQuerySchema = z.object({
         from: isoDateSchema,
 });
 
-export function buildApp(args: BankingArgs & DatabaseArgs) {
+export function buildApp(args: BankingArgs & DatabaseArgs)
+{
         const app = Fastify({ logger: true });
         const closeDatabase = mkCloseDatabase(args);
         const getUserReliability = mkGetUserReliability(args);
         const syncUser = mkSyncUser(args);
 
-        app.addHook("onClose", async () => {
+        app.addHook("onClose", async () =>
+        {
                 closeDatabase();
         });
 
-        app.post<{ Params: UserParams }>("/api/users/:userId/sync", async (request, reply) => {
+        app.post<{ Params: UserParams }>("/api/users/:userId/sync", async (request, reply) =>
+        {
                 const result = await syncUser(request.params.userId);
 
                 return reply.send(result);
         });
 
-        app.get<{ Params: UserParams; Querystring: ReliabilityQuery }>("/api/users/:userId/reliability", async (request, reply) => {
+        app.get<{ Params: UserParams; Querystring: ReliabilityQuery }>("/api/users/:userId/reliability", async (request, reply) =>
+        {
                 const query = reliabilityQuerySchema.safeParse(request.query);
 
-                if (!query.success) {
+                if (!query.success)
+                {
                         return reply.code(400).send({
                                 error: "from must be a valid date in YYYY-MM-DD format",
                         });

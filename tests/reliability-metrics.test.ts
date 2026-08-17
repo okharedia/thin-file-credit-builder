@@ -15,7 +15,8 @@ const account: Account = {
         name: "Checking",
 };
 
-function transaction(id: string, date: string, amount = 100, merchantCategoryCode = "0000"): Transaction {
+function transaction(id: string, date: string, amount = 100, merchantCategoryCode = "0000"): Transaction
+{
         return {
                 id,
                 account_id: account.id,
@@ -29,7 +30,8 @@ function transaction(id: string, date: string, amount = 100, merchantCategoryCod
         };
 }
 
-test("calculates reliability metrics from stored transactions", async (t) => {
+test("calculates reliability metrics from stored transactions", async (t) =>
+{
         const { testDirectory, databaseFilePath } = await createTempDatabase();
         const databaseArgs = { databaseFilePath };
         const closeDatabase = mkCloseDatabase(databaseArgs);
@@ -37,7 +39,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
         const saveTransactions = mkSaveTransactions(databaseArgs);
         const getReliabilityMetrics = mkGetReliabilityMetrics(databaseArgs);
 
-        t.after(() => {
+        t.after(() =>
+        {
                 closeDatabase();
                 rmSync(testDirectory, { recursive: true, force: true });
         });
@@ -156,13 +159,16 @@ test("calculates reliability metrics from stored transactions", async (t) => {
                 },
         ] as const;
 
-        for (const testCase of cases) {
-                await t.test(testCase.name, () => {
+        for (const testCase of cases)
+        {
+                await t.test(testCase.name, () =>
+                {
                         assert.deepEqual(getReliabilityMetrics({ ...baseArgs, ...testCase.args }), testCase.expected);
                 });
         }
 
-        await t.test("excludes savings transfers from high-risk spending", () => {
+        await t.test("excludes savings transfers from high-risk spending", () =>
+        {
                 const metrics = getReliabilityMetrics({
                         ...baseArgs,
                         essentialCategoryCodes: ["5812"],
@@ -172,7 +178,8 @@ test("calculates reliability metrics from stored transactions", async (t) => {
                 assert.equal(metrics.totalHighRiskDebitCents, 5_000);
         });
 
-        await t.test("counts essential category credits", () => {
+        await t.test("counts essential category credits", () =>
+        {
                 saveTransactions([transaction("october-essential-credit", "2025-10-16", 25, "5812")]);
 
                 assert.deepEqual(

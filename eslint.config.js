@@ -1,11 +1,12 @@
 import babelParser from "@babel/eslint-parser";
 import stylistic from "@stylistic/eslint-plugin";
+import local from "./eslint-local-plugin.js";
 
 export default [
         { ignores: ["dist/**", "node_modules/**", "data/**"] },
         {
                 files: ["**/*.ts"],
-                plugins: { "@stylistic": stylistic },
+                plugins: { "@stylistic": stylistic, local },
                 languageOptions: {
                         parser: babelParser,
                         parserOptions: {
@@ -21,6 +22,8 @@ export default [
                         },
                 },
                 rules: {
+                        "@stylistic/brace-style": ["error", "allman"],
+                        "local/destructure-param-newline": "error",
                         // prettier-ignore
                         "@stylistic/padding-line-between-statements": [
                                 "error",

@@ -11,8 +11,15 @@ import type { ReliabilityMetrics } from "../../database.js";
  * essential-expense total earns zero because it cannot produce a meaningful
  * coverage ratio.
  */
-export function calculateIncomeCoveragePoints({ totalIncomeCents, totalEssentialExpensesCents }: Pick<ReliabilityMetrics, "totalIncomeCents" | "totalEssentialExpensesCents">): number {
-        if (totalIncomeCents <= 0 || totalEssentialExpensesCents <= 0) {
+export function calculateIncomeCoveragePoints(
+        {
+                totalIncomeCents,
+                totalEssentialExpensesCents,
+        }: Pick<ReliabilityMetrics, "totalIncomeCents" | "totalEssentialExpensesCents">,
+): number
+{
+        if (totalIncomeCents <= 0 || totalEssentialExpensesCents <= 0)
+        {
                 return 0;
         }
 

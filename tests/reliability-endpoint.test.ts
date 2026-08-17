@@ -17,7 +17,8 @@ const account: Account = {
         name: "Checking",
 };
 
-function transaction(id: string, date: string, amount: number, merchantCategoryCode: string): Transaction {
+function transaction(id: string, date: string, amount: number, merchantCategoryCode: string): Transaction
+{
         return {
                 id,
                 account_id: account.id,
@@ -31,9 +32,12 @@ function transaction(id: string, date: string, amount: number, merchantCategoryC
         };
 }
 
-test("returns the reliability score response", async (t) => {
-        const categoryServer = createServer((request, response) => {
-                if (request.url !== "/dictionaries/merchant-categories") {
+test("returns the reliability score response", async (t) =>
+{
+        const categoryServer = createServer((request, response) =>
+        {
+                if (request.url !== "/dictionaries/merchant-categories")
+                {
                         response.writeHead(404).end();
 
                         return;
@@ -53,7 +57,8 @@ test("returns the reliability score response", async (t) => {
                 );
         });
 
-        await new Promise<void>((resolve) => {
+        await new Promise<void>((resolve) =>
+        {
                 categoryServer.listen(0, "127.0.0.1", resolve);
         });
         const address = categoryServer.address();
@@ -91,9 +96,11 @@ test("returns the reliability score response", async (t) => {
 
         const app = buildApp(args);
 
-        t.after(async () => {
+        t.after(async () =>
+        {
                 await app.close();
-                await new Promise<void>((resolve, reject) => {
+                await new Promise<void>((resolve, reject) =>
+                {
                         categoryServer.close((error) => (error ? reject(error) : resolve()));
                 });
                 rmSync(testDirectory, { recursive: true, force: true });
@@ -112,8 +119,8 @@ test("returns the reliability score response", async (t) => {
                 reliability_index: 82,
                 score_band: "HIGH",
                 metrics: {
-                        income_regularity: 0.83,
-                        income_coverage_ratio: 1.67,
+                        income_regularity: 5 / 6,
+                        income_coverage_ratio: 5 / 3,
                         essential_payments_consistency: 1,
                         good_months: 4,
                         negative_balance_days: 0,

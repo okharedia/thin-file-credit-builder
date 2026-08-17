@@ -17,8 +17,10 @@ const listAccountsResponseSchema = z.object({
         accounts: z.array(accountSchema),
 });
 
-export function mkListAccounts(args: BankingArgs) {
-        return async (userId: string) => {
+export function mkListAccounts(args: BankingArgs)
+{
+        return async (userId: string) =>
+        {
                 const url = new URL(`/users/${encodeURIComponent(userId)}/accounts`, args.bankingApiBaseUrl);
                 const body = await bankingApiGet(url, listAccountsResponseSchema);
 

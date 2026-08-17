@@ -6,7 +6,8 @@ import { mkCloseDatabase } from "../src/database.js";
 import { mkSyncUser } from "../src/packages/sync-user.js";
 import { createTempDatabase } from "./create-temp-database.js";
 
-test("reports duplicate transactions when syncing a user twice", async (t) => {
+test("reports duplicate transactions when syncing a user twice", async (t) =>
+{
         const { testDirectory, databaseFilePath } = await createTempDatabase();
         const args = {
                 bankingApiBaseUrl: "https://btq03nn21b.execute-api.eu-central-1.amazonaws.com/",
@@ -15,7 +16,8 @@ test("reports duplicate transactions when syncing a user twice", async (t) => {
         const syncUser = mkSyncUser(args);
         const closeDatabase = mkCloseDatabase(args);
 
-        t.after(() => {
+        t.after(() =>
+        {
                 closeDatabase();
                 rmSync(testDirectory, { recursive: true, force: true });
         });
@@ -42,10 +44,13 @@ test("reports duplicate transactions when syncing a user twice", async (t) => {
 
         const database = new Database(databaseFilePath, { readonly: true });
 
-        try {
+        try
+        {
                 assert.equal(database.prepare("SELECT COUNT(*) FROM accounts WHERE user_id = ?").pluck().get("user_1001"), 2);
                 assert.equal(database.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 631);
-        } finally {
+        }
+        finally
+        {
                 database.close();
         }
 });

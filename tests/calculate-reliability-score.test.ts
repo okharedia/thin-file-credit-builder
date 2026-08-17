@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calculateEssentialPaymentsConsistencyPoints, calculateHighRiskSpendingPoints, calculateIncomeCoveragePoints, calculateIncomeRegularityPoints, calculateLateFeePoints, calculateNegativeBalancePoints, calculateReliabilityScore, calculateResiliencePoints, calculateSavingsBehaviorPoints } from "../src/packages/score/index.js";
+import { calculateEssentialPaymentsConsistencyPoints, calculateIncomeCoveragePoints, calculateIncomeRegularityPoints, calculateReliabilityScore, calculateResiliencePoints } from "../src/packages/score/index.js";
 
-test("calculates income regularity points", () => {
+test("calculates income regularity points", () =>
+{
         const cases = [
                 { incomeMonthCount: 0, expectedPoints: 0 },
                 { incomeMonthCount: 1, expectedPoints: 4 },
@@ -11,7 +12,8 @@ test("calculates income regularity points", () => {
                 { incomeMonthCount: 6, expectedPoints: 25 },
         ];
 
-        for (const { incomeMonthCount, expectedPoints } of cases) {
+        for (const { incomeMonthCount, expectedPoints } of cases)
+        {
                 assert.equal(
                         calculateIncomeRegularityPoints({
                                 incomeMonthCount,
@@ -30,7 +32,8 @@ test("calculates income regularity points", () => {
         );
 });
 
-test("calculates income coverage points", () => {
+test("calculates income coverage points", () =>
+{
         const cases = [
                 { totalIncomeCents: 0, expectedPoints: 0 },
                 { totalIncomeCents: 5_000, expectedPoints: 6 },
@@ -40,7 +43,8 @@ test("calculates income coverage points", () => {
                 { totalIncomeCents: 30_000, expectedPoints: 25 },
         ];
 
-        for (const { totalIncomeCents, expectedPoints } of cases) {
+        for (const { totalIncomeCents, expectedPoints } of cases)
+        {
                 assert.equal(
                         calculateIncomeCoveragePoints({
                                 totalIncomeCents,
@@ -51,7 +55,8 @@ test("calculates income coverage points", () => {
         }
 });
 
-test("returns zero income coverage points without a usable denominator", () => {
+test("returns zero income coverage points without a usable denominator", () =>
+{
         assert.equal(
                 calculateIncomeCoveragePoints({
                         totalIncomeCents: 10_000,
@@ -69,7 +74,8 @@ test("returns zero income coverage points without a usable denominator", () => {
         );
 });
 
-test("calculates essential payments consistency points", () => {
+test("calculates essential payments consistency points", () =>
+{
         const cases = [
                 { essentialCategoryMonthCount: 0, expectedPoints: 0 },
                 { essentialCategoryMonthCount: 1, expectedPoints: 2 },
@@ -79,7 +85,8 @@ test("calculates essential payments consistency points", () => {
                 { essentialCategoryMonthCount: 12, expectedPoints: 25 },
         ];
 
-        for (const { essentialCategoryMonthCount, expectedPoints } of cases) {
+        for (const { essentialCategoryMonthCount, expectedPoints } of cases)
+        {
                 assert.equal(
                         calculateEssentialPaymentsConsistencyPoints({
                                 essentialCategoryMonthCount,
@@ -91,7 +98,8 @@ test("calculates essential payments consistency points", () => {
         }
 });
 
-test("returns zero consistency points without essential categories", () => {
+test("returns zero consistency points without essential categories", () =>
+{
         assert.equal(
                 calculateEssentialPaymentsConsistencyPoints({
                         essentialCategoryMonthCount: 0,
@@ -102,7 +110,17 @@ test("returns zero consistency points without essential categories", () => {
         );
 });
 
-test("calculates savings behavior points", () => {
+const emptyResilienceMetrics = {
+        scoringWindowMonthCount: 6,
+        savingsMonthCount: 0,
+        lateFeeEventCount: 0,
+        totalHighRiskDebitCents: 0,
+        totalSpendingDebitCents: 0,
+        negativeBalanceDayCount: 0,
+};
+
+test("calculates savings behavior points", () =>
+{
         const cases = [
                 { savingsMonthCount: 0, expectedPoints: 0 },
                 { savingsMonthCount: 1, expectedPoints: 4 },
@@ -111,18 +129,14 @@ test("calculates savings behavior points", () => {
                 { savingsMonthCount: 6, expectedPoints: 25 },
         ];
 
-        for (const { savingsMonthCount, expectedPoints } of cases) {
-                assert.equal(
-                        calculateSavingsBehaviorPoints({
-                                savingsMonthCount,
-                                scoringWindowMonthCount: 6,
-                        }),
-                        expectedPoints,
-                );
+        for (const { savingsMonthCount, expectedPoints } of cases)
+        {
+                assert.equal(calculateResiliencePoints({ ...emptyResilienceMetrics, savingsMonthCount }), expectedPoints);
         }
 });
 
-test("calculates negative balance points", () => {
+test("calculates negative balance points", () =>
+{
         const cases = [
                 { negativeBalanceDayCount: 0, expectedPoints: 0 },
                 { negativeBalanceDayCount: 1, expectedPoints: -1 },
@@ -131,12 +145,14 @@ test("calculates negative balance points", () => {
                 { negativeBalanceDayCount: 54, expectedPoints: -10 },
         ];
 
-        for (const { negativeBalanceDayCount, expectedPoints } of cases) {
-                assert.equal(calculateNegativeBalancePoints({ negativeBalanceDayCount }), expectedPoints);
+        for (const { negativeBalanceDayCount, expectedPoints } of cases)
+        {
+                assert.equal(calculateResiliencePoints({ ...emptyResilienceMetrics, negativeBalanceDayCount }), expectedPoints);
         }
 });
 
-test("calculates late fee points", () => {
+test("calculates late fee points", () =>
+{
         const cases = [
                 { lateFeeEventCount: 0, expectedPoints: 0 },
                 { lateFeeEventCount: 1, expectedPoints: -1 },
@@ -145,12 +161,14 @@ test("calculates late fee points", () => {
                 { lateFeeEventCount: 8, expectedPoints: -5 },
         ];
 
-        for (const { lateFeeEventCount, expectedPoints } of cases) {
-                assert.equal(calculateLateFeePoints({ lateFeeEventCount }), expectedPoints);
+        for (const { lateFeeEventCount, expectedPoints } of cases)
+        {
+                assert.equal(calculateResiliencePoints({ ...emptyResilienceMetrics, lateFeeEventCount }), expectedPoints);
         }
 });
 
-test("calculates high-risk spending points", () => {
+test("calculates high-risk spending points", () =>
+{
         const cases = [
                 { totalHighRiskDebitCents: 0, expectedPoints: 0 },
                 { totalHighRiskDebitCents: 2_000, expectedPoints: -1 },
@@ -159,9 +177,11 @@ test("calculates high-risk spending points", () => {
                 { totalHighRiskDebitCents: 10_000, expectedPoints: -5 },
         ];
 
-        for (const { totalHighRiskDebitCents, expectedPoints } of cases) {
+        for (const { totalHighRiskDebitCents, expectedPoints } of cases)
+        {
                 assert.equal(
-                        calculateHighRiskSpendingPoints({
+                        calculateResiliencePoints({
+                                ...emptyResilienceMetrics,
                                 totalHighRiskDebitCents,
                                 totalSpendingDebitCents: 10_000,
                         }),
@@ -170,14 +190,9 @@ test("calculates high-risk spending points", () => {
         }
 });
 
-test("returns zero high-risk points without spending", () => {
-        assert.equal(
-                calculateHighRiskSpendingPoints({
-                        totalHighRiskDebitCents: 0,
-                        totalSpendingDebitCents: 0,
-                }),
-                0,
-        );
+test("returns zero high-risk points without spending", () =>
+{
+        assert.equal(calculateResiliencePoints(emptyResilienceMetrics), 0);
 });
 
 const reliabilityScoreMetrics = {
@@ -194,17 +209,20 @@ const reliabilityScoreMetrics = {
         negativeBalanceDayCount: 7,
 };
 
-test("combines resilience points", () => {
+test("combines resilience points", () =>
+{
         // Savings 17 - negative balances 7 - late fees 1 - high risk 1 = 8.
         assert.equal(calculateResiliencePoints(reliabilityScoreMetrics), 8);
 });
 
-test("calculates the final reliability score", () => {
+test("calculates the final reliability score", () =>
+{
         // Income regularity 21 + coverage 18 + consistency 21 + resilience 8 = 68.
         assert.equal(calculateReliabilityScore(reliabilityScoreMetrics), 68);
 });
 
-test("clamps the final reliability score to zero", () => {
+test("clamps the final reliability score to zero", () =>
+{
         assert.equal(
                 calculateReliabilityScore({
                         ...reliabilityScoreMetrics,

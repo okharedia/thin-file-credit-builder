@@ -14,8 +14,10 @@ const discoveryResponseSchema = z.object({
         data_range: dataRangeSchema,
 });
 
-export function mkGetDataRange(args: BankingArgs) {
-        return async () => {
+export function mkGetDataRange(args: BankingArgs)
+{
+        return async () =>
+        {
                 const url = new URL("/", args.bankingApiBaseUrl);
                 const body = await bankingApiGet(url, discoveryResponseSchema);
 

@@ -9,8 +9,8 @@
                 "start": "node dist/server.js",
                 "test": "tsx --test tests/**/*.test.ts",
                 "typecheck": "tsc --noEmit",
-                "format": "prettier --write .",
-                "format:check": "prettier --check .",
+                "format": "prettier --write . && eslint . --fix",
+                "format:check": "eslint .",
                 "lint": "eslint .",
                 "lint:fix": "eslint . --fix"
         },
@@ -28,6 +28,7 @@
                 "@types/node": "^26.2.0",
                 "eslint": "^10.8.1",
                 "prettier": "^3.9.6",
+                "prettier-plugin-brace-style": "^0.10.3",
                 "tsx": "^4.23.12",
                 "typescript": "^7.0.2"
         }

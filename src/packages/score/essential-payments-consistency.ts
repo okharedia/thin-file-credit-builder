@@ -11,20 +11,20 @@ import type { ReliabilityMetrics } from "../../database.js";
  * that category exists in that month. No configured essential categories
  * earns zero points because there is no consistency evidence to score.
  */
-export function calculateEssentialPaymentsConsistencyPoints({
-        essentialCategoryMonthCount,
-        essentialCategoryCount,
-        scoringWindowMonthCount,
-}: Pick<ReliabilityMetrics, "essentialCategoryMonthCount" | "essentialCategoryCount"> & {
-        scoringWindowMonthCount: number;
-}): number {
-        const possibleCategoryMonthCount = scoringWindowMonthCount * essentialCategoryCount;
-
-        if (possibleCategoryMonthCount === 0) {
+export function calculateEssentialPaymentsConsistencyPoints(
+        {
+                essentialCategoryMonthCount,
+                essentialCategoryCount,
+                scoringWindowMonthCount,
+        }: Pick<ReliabilityMetrics, "essentialCategoryMonthCount" | "essentialCategoryCount"> & {
+                scoringWindowMonthCount: number;
+        },
+): number
+{
+        if (scoringWindowMonthCount === 0 || essentialCategoryCount === 0)
+        {
                 return 0;
         }
 
-        const essentialPaymentsConsistency = essentialCategoryMonthCount / possibleCategoryMonthCount;
-
-        return Math.round(essentialPaymentsConsistency * 25);
+        return Math.round((essentialCategoryMonthCount / (scoringWindowMonthCount * essentialCategoryCount)) * 25);
 }

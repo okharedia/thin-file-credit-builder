@@ -3,7 +3,8 @@ import { test } from "node:test";
 import { parseISO } from "date-fns";
 import { getScoringWindow } from "../src/packages/scoring-window.js";
 
-test("derives an inclusive calendar-month scoring window", () => {
+test("derives an inclusive calendar-month scoring window", () =>
+{
         const cases = [
                 {
                         from: "2026-02-20",
@@ -32,7 +33,8 @@ test("derives an inclusive calendar-month scoring window", () => {
                 },
         ];
 
-        for (const { from, monthCount, expected } of cases) {
+        for (const { from, monthCount, expected } of cases)
+        {
                 assert.deepEqual(getScoringWindow(parseISO(from), monthCount), {
                         startDate: parseISO(expected.startDate),
                         endDate: parseISO(expected.endDate),

@@ -11,7 +11,8 @@ type ScoringWindow = {
  *
  * `from=2026-02-20` and `monthCount=6` → `2025-09-01` to `2026-02-20`.
  */
-export function getScoringWindow(from: Date, monthCount: number): ScoringWindow {
+export function getScoringWindow(from: Date, monthCount: number): ScoringWindow
+{
         return {
                 startDate: startOfMonth(subMonths(from, monthCount - 1)),
                 endDate: from,

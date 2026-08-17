@@ -33,7 +33,8 @@ const savingsAccount: Account = {
         name: "Savings",
 };
 
-function transaction(id: string, date: string, amountCents: number): Transaction {
+function transaction(id: string, date: string, amountCents: number): Transaction
+{
         return {
                 id,
                 account_id: account.id,
@@ -47,7 +48,8 @@ function transaction(id: string, date: string, amountCents: number): Transaction
         };
 }
 
-test("reconstructs daily account balances from the closing balance", async (t) => {
+test("reconstructs daily account balances from the closing balance", async (t) =>
+{
         const { testDirectory, databaseFilePath } = await createTempDatabase();
         const databaseArgs = { databaseFilePath };
         const closeDatabase = mkCloseDatabase(databaseArgs);
@@ -58,7 +60,8 @@ test("reconstructs daily account balances from the closing balance", async (t) =
         const listCheckingAccountNegativeBalanceDayCounts = mkListCheckingAccountNegativeBalanceDayCounts(databaseArgs);
         const getCheckingAccountNegativeBalanceDayCount = mkGetCheckingAccountNegativeBalanceDayCount(databaseArgs);
 
-        t.after(() => {
+        t.after(() =>
+        {
                 closeDatabase();
                 rmSync(testDirectory, { recursive: true, force: true });
         });
