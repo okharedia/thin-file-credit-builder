@@ -1,20 +1,24 @@
 {
-    "testing.gutterEnabled": true,
-    "nodejs-testing.extensions": [
-        {
-            "extensions": ["mjs", "cjs", "js"],
-            "parameters": []
+        "testing.gutterEnabled": true,
+        "nodejs-testing.extensions": [
+                {
+                        "extensions": ["mjs", "cjs", "js"],
+                        "parameters": []
+                },
+                {
+                        "extensions": ["mts", "cts", "ts", "tsx"],
+                        "parameters": ["--import", "tsx"]
+                }
+        ],
+        "editor.tabSize": 8,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.wordWrap": "off",
+        "editor.rulers": [],
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+                "source.fixAll.eslint": "always"
         },
-        {
-            "extensions": ["mts", "cts", "ts", "tsx"],
-            "parameters": ["--import", "tsx"]
-        }
-    ],
-    "editor.tabSize": 4,
-    "editor.insertSpaces": true,
-    "editor.detectIndentation": false,
-    "editor.wordWrap": "off",
-    "editor.rulers": [],
-    "editor.defaultFormatter": "esbenp.prettier-vscode",
-    "editor.formatOnSave": true
+        "eslint.validate": ["javascript", "typescript"]
 }

@@ -1,11 +1,16 @@
 ---
-description: Indent and line-length conventions for this repo
+description: Indent and blank-line conventions for this repo
 globs: "**/*.{ts,js,mjs,cjs,json}"
 alwaysApply: false
 ---
 
 # Formatting
 
-- Indent with 4 spaces, never 2
+- Indent with 8 spaces
 - Do not wrap lines to 80 or 100 characters. Keep statements on one line unless a break is required for syntax or readability of a long chained expression
 - Print width is effectively unlimited (Prettier `printWidth: 999`)
+- Blank line before `return` when another statement precedes it
+- Blank line after `if` / `for` / `while` / `switch` / `try` blocks
+- Blank line after a `const` / `let` / `var` group when the next statement is not another declaration
+- Adjacent declarations stay together; do not insert blank lines between them
+- Do not pad the inside of braces (no blank line right after `{` or right before `}`)

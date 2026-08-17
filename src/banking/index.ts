@@ -4,5 +4,5 @@ export { codesInGroup, mkListMerchantCategories, type MerchantCategory, type Mer
 export { mkGetTransactionPage, type Transaction, type TransactionPage } from "./transaction.js";
 
 export type BankingArgs = {
-    bankingApiBaseUrl: string;
+        bankingApiBaseUrl: string;
 };

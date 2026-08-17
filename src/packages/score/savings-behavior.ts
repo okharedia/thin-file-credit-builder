@@ -1,5 +1,4 @@
 import type { ReliabilityMetrics } from "../../database.js";
-import { requirePositiveScoringWindowMonthCount } from "./require-positive-scoring-window-month-count.js";
 
 /**
  * Calculates the 0–25 savings behavior points.
@@ -11,18 +10,12 @@ import { requirePositiveScoringWindowMonthCount } from "./require-positive-scori
  * transaction, regardless of the number or value of those transactions.
  */
 export function calculateSavingsBehaviorPoints({
-    savingsMonthCount,
-    scoringWindowMonthCount,
+        savingsMonthCount,
+        scoringWindowMonthCount,
 }: Pick<ReliabilityMetrics, "savingsMonthCount"> & {
-    scoringWindowMonthCount: number;
+        scoringWindowMonthCount: number;
 }): number {
-    requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
+        const savingsBehavior = savingsMonthCount / scoringWindowMonthCount;
 
-    if (!Number.isSafeInteger(savingsMonthCount) || savingsMonthCount < 0 || savingsMonthCount > scoringWindowMonthCount) {
-        throw new RangeError("savingsMonthCount must be between zero and scoringWindowMonthCount");
-    }
-
-    const savingsBehavior = savingsMonthCount / scoringWindowMonthCount;
-
-    return Math.round(savingsBehavior * 25);
+        return Math.round(savingsBehavior * 25);
 }
