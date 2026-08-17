@@ -1,7 +1,7 @@
+import { parseISO } from "date-fns";
 import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { test } from "node:test";
-import { parseISO } from "date-fns";
 import type { Account, Transaction } from "../src/banking/index.js";
 import { mkCloseDatabase, mkGetCheckingAccountNegativeBalanceDayCount, mkListAccountDailyBalances, mkListCheckingAccountNegativeBalanceDayCounts, mkListUserAccounts, mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
@@ -67,7 +67,17 @@ test("reconstructs daily account balances from the closing balance", async (t) =
         });
 
         saveAccounts([account, secondCheckingAccount, savingsAccount]);
-        saveTransactions([transaction("before-window", "2025-12-31", -100), transaction("january-1", "2026-01-01", -100), transaction("january-2-debit", "2026-01-02", -100), transaction("january-2-credit", "2026-01-02", +50), transaction("january-4", "2026-01-04", +200), transaction("window-end", "2026-01-05", +100), transaction("after-window", "2026-01-06", -100)]);
+        saveTransactions([
+                //
+                transaction("before-window", "2025-12-31", -100),
+                transaction("january-1", "2026-01-01", -100),
+                transaction("january-2-debit", "2026-01-02", -100),
+                transaction("january-2-credit", "2026-01-02", +50),
+                transaction("january-4", "2026-01-04", +200),
+                transaction("window-end", "2026-01-05", +100),
+                transaction("after-window", "2026-01-06", -100),
+                //
+        ]);
 
         const sortByDateDesc = (a: { day: string }, b: { day: string }) => b.day.localeCompare(a.day);
 
@@ -133,6 +143,9 @@ test("reconstructs daily account balances from the closing balance", async (t) =
                 { accountId: account.id, negativeBalanceDayCount: 3 },
                 {
                         accountId: secondCheckingAccount.id,
+                        //That second checking account is stored with negative balance and no transactions.
+                        // Reconstruction anchors on that closing balance and walks backward;
+                        // with a net of 0 each day, every end-of-day balance stays negative.
                         negativeBalanceDayCount: 5,
                 },
         ]);

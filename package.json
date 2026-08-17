@@ -13,7 +13,8 @@
                 "format": "prettier --write . && eslint . --fix",
                 "format:check": "eslint .",
                 "lint": "eslint .",
-                "lint:fix": "eslint . --fix"
+                "lint:fix": "eslint . --fix",
+                "docs:diagrams": "tsx scripts/render-diagrams.ts"
         },
         "dependencies": {
                 "better-sqlite3": "^13.0.3",

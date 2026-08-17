@@ -1,0 +1,21 @@
+sequenceDiagram
+  participant Client
+  participant API as Fastify
+  participant Sync as user/sync
+  participant Bank as Banking API
+  participant DB as SQLite
+
+  Client->>API: POST /api/users/:userId/sync
+  API->>Sync: mkSyncUser(userId)
+  par
+    Sync->>Bank: GET /users/:userId/accounts
+    Sync->>Bank: GET / data range
+  end
+  Sync->>DB: upsert accounts
+  loop each local account id
+    loop until next_cursor is null
+      Sync->>Bank: GET /accounts/:id/transactions
+      Sync->>DB: INSERT OR IGNORE transactions
+    end
+  end
+  Sync-->>Client: sync summary

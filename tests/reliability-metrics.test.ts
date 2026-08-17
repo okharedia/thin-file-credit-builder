@@ -1,7 +1,7 @@
+import { parseISO } from "date-fns";
 import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { test } from "node:test";
-import { parseISO } from "date-fns";
 import type { Account, Transaction } from "../src/banking/index.js";
 import { mkCloseDatabase, mkGetReliabilityMetrics, mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
@@ -46,7 +46,25 @@ test("calculates reliability metrics from stored transactions", async (t) =>
         });
 
         saveAccounts([account]);
-        saveTransactions([transaction("before-window", "2025-08-31", 100), transaction("september-income", "2025-09-01", -100, "9001"), transaction("october-credit", "2025-10-15", 100), transaction("october-second-credit", "2025-10-20", 100), transaction("october-savings", "2025-10-25", 50, "6540"), transaction("october-savings-transfer", "2025-10-26", -20, "6540"), transaction("november-debit", "2025-11-10", -100, "5812"), transaction("november-high-risk", "2025-11-15", -50, "7995"), transaction("december-debit", "2025-12-10", -100, "5812"), transaction("december-late-fee", "2025-12-15", -10, "6012"), transaction("january-debit", "2026-01-10", -100, "5812"), transaction("small-essential", "2026-01-15", -100, "4900"), transaction("february-savings", "2026-02-10", 50, "6540"), transaction("window-end", "2026-02-20", 100), transaction("after-window", "2026-02-21", 100)]);
+        saveTransactions([
+                //
+                transaction("before-window", "2025-08-31", 100),
+                transaction("september-income", "2025-09-01", -100, "9001"),
+                transaction("october-credit", "2025-10-15", 100),
+                transaction("october-second-credit", "2025-10-20", 100),
+                transaction("october-savings", "2025-10-25", 50, "6540"),
+                transaction("october-savings-transfer", "2025-10-26", -20, "6540"),
+                transaction("november-debit", "2025-11-10", -100, "5812"),
+                transaction("november-high-risk", "2025-11-15", -50, "7995"),
+                transaction("december-debit", "2025-12-10", -100, "5812"),
+                transaction("december-late-fee", "2025-12-15", -10, "6012"),
+                transaction("january-debit", "2026-01-10", -100, "5812"),
+                transaction("small-essential", "2026-01-15", -100, "4900"),
+                transaction("february-savings", "2026-02-10", 50, "6540"),
+                transaction("window-end", "2026-02-20", 100),
+                transaction("after-window", "2026-02-21", 100),
+                //
+        ]);
 
         const baseArgs = {
                 userId: account.user_id,

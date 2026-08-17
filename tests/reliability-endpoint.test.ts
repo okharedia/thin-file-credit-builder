@@ -1,8 +1,8 @@
+import { parseISO } from "date-fns";
 import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { createServer } from "node:http";
 import { test } from "node:test";
-import { parseISO } from "date-fns";
 import { buildApp } from "../src/app.js";
 import type { Account, Transaction } from "../src/banking/index.js";
 import { mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
@@ -75,6 +75,7 @@ test("returns the reliability score response", async (t) =>
 
         saveAccounts([account]);
         saveTransactions([
+                //
                 transaction("september-income", "2025-09-02", 100, "9001"),
                 transaction("october-income", "2025-10-02", 100, "9001"),
                 transaction("november-income", "2025-11-02", 100, "9001"),
@@ -92,6 +93,7 @@ test("returns the reliability score response", async (t) =>
                 transaction("february-rent", "2026-02-05", -50, "6513"),
                 transaction("late-fee", "2026-01-10", -5, "6012"),
                 transaction("high-risk", "2026-02-10", -50, "7995"),
+                //
         ]);
 
         const app = buildApp(args);
