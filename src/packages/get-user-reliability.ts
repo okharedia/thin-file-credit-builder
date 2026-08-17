@@ -4,26 +4,22 @@ import {
   type BankingArgs,
 } from "../banking/index.js";
 import {
+  mkGetCheckingAccountNegativeBalanceDayCount,
   mkGetReliabilityMetrics,
-  mkListCheckingAccountNegativeBalanceDayCounts,
   type DatabaseArgs,
 } from "../database.js";
 import { buildDrivers } from "./drivers.js";
 import { ratio } from "./ratio.js";
 import { roundToTwoDecimalPlaces } from "./round-to-two-decimal-places.js";
-import {
-  calculateReliabilityScore,
-  scoreBand,
-  sumNegativeBalanceDayCounts,
-} from "./score/index.js";
+import { calculateReliabilityScore, scoreBand } from "./score/index.js";
 import { getScoringWindow } from "./scoring-window.js";
 
 const SCORING_WINDOW_MONTH_COUNT = 6;
 
 export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
   const getReliabilityMetrics = mkGetReliabilityMetrics(args);
-  const listCheckingAccountNegativeBalanceDayCounts =
-    mkListCheckingAccountNegativeBalanceDayCounts(args);
+  const getCheckingAccountNegativeBalanceDayCount =
+    mkGetCheckingAccountNegativeBalanceDayCount(args);
   const listMerchantCategories = mkListMerchantCategories(args);
 
   return async (userId: string, from: string) => {
@@ -42,15 +38,12 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
       feeCategoryCodes: codesInGroup(categories, "fees"),
       highRiskCategoryCodes: codesInGroup(categories, "high_risk"),
     });
-    const checkingAccountNegativeBalanceDayCounts =
-      listCheckingAccountNegativeBalanceDayCounts({
+    const negativeBalanceDayCount =
+      getCheckingAccountNegativeBalanceDayCount({
         userId,
         startDate,
         endDate,
       });
-    const negativeBalanceDayCount = sumNegativeBalanceDayCounts(
-      checkingAccountNegativeBalanceDayCounts,
-    );
     const reliabilityIndex = calculateReliabilityScore({
       ...metrics,
       scoringWindowMonthCount: SCORING_WINDOW_MONTH_COUNT,

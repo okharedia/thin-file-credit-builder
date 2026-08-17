@@ -1,3 +1,5 @@
+import { formatISO, parseISO, startOfMonth, subMonths } from "date-fns";
+
 type ScoringWindow = {
   startDate: string;
   endDate: string;
@@ -17,14 +19,10 @@ export function getScoringWindow(
     throw new RangeError("monthCount must be a positive integer");
   }
 
-  const year = Number(from.slice(0, 4));
-  const month = Number(from.slice(5, 7));
-  const startMonthIndex = year * 12 + (month - 1) - (monthCount - 1);
-  const startYear = Math.floor(startMonthIndex / 12);
-  const startMonth = ((startMonthIndex % 12) + 12) % 12 + 1;
+  const start = startOfMonth(subMonths(parseISO(from), monthCount - 1));
 
   return {
-    startDate: `${String(startYear).padStart(4, "0")}-${String(startMonth).padStart(2, "0")}-01`,
+    startDate: formatISO(start, { representation: "date" }),
     endDate: from,
   };
 }

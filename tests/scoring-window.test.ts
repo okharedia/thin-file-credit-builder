@@ -24,6 +24,11 @@ test("derives an inclusive calendar-month scoring window", () => {
       monthCount: 3,
       expected: { startDate: "2025-11-01", endDate: "2026-01-15" },
     },
+    {
+      from: "2026-03-31",
+      monthCount: 2,
+      expected: { startDate: "2026-02-01", endDate: "2026-03-31" },
+    },
   ];
 
   for (const { from, monthCount, expected } of cases) {

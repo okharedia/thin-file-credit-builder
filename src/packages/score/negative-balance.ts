@@ -1,5 +1,3 @@
-import type { AccountNegativeBalanceDayCount } from "../../database.js";
-
 /**
  * Calculates the 0 to −10 negative-balance adjustment.
  *
@@ -27,13 +25,4 @@ export function calculateNegativeBalancePoints({
   }
 
   return -Math.min(negativeBalanceDayCount, 10);
-}
-
-export function sumNegativeBalanceDayCounts(
-  accountCounts: readonly AccountNegativeBalanceDayCount[],
-): number {
-  return accountCounts.reduce(
-    (total, account) => total + account.negativeBalanceDayCount,
-    0,
-  );
 }

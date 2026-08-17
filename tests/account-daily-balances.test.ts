@@ -4,6 +4,7 @@ import { test } from "node:test";
 import type { Account, Transaction } from "../src/banking/index.js";
 import {
   mkCloseDatabase,
+  mkGetCheckingAccountNegativeBalanceDayCount,
   mkListAccountDailyBalances,
   mkListCheckingAccountNegativeBalanceDayCounts,
   mkListUserAccounts,
@@ -68,6 +69,8 @@ test("reconstructs daily account balances from the closing balance", async (t) =
   const listUserAccounts = mkListUserAccounts(databaseArgs);
   const listCheckingAccountNegativeBalanceDayCounts =
     mkListCheckingAccountNegativeBalanceDayCounts(databaseArgs);
+  const getCheckingAccountNegativeBalanceDayCount =
+    mkGetCheckingAccountNegativeBalanceDayCount(databaseArgs);
 
   t.after(() => {
     closeDatabase();
@@ -142,12 +145,14 @@ test("reconstructs daily account balances from the closing balance", async (t) =
     { id: savingsAccount.id, type: "savings", balanceCents: -100 },
   ]);
 
+  const negativeBalanceQuery = {
+    userId: account.user_id,
+    startDate: "2026-01-01",
+    endDate: "2026-01-05",
+  };
+
   assert.deepEqual(
-    listCheckingAccountNegativeBalanceDayCounts({
-      userId: account.user_id,
-      startDate: "2026-01-01",
-      endDate: "2026-01-05",
-    }),
+    listCheckingAccountNegativeBalanceDayCounts(negativeBalanceQuery),
     [
       { accountId: account.id, negativeBalanceDayCount: 3 },
       {
@@ -155,5 +160,10 @@ test("reconstructs daily account balances from the closing balance", async (t) =
         negativeBalanceDayCount: 5,
       },
     ],
+  );
+
+  assert.equal(
+    getCheckingAccountNegativeBalanceDayCount(negativeBalanceQuery),
+    8,
   );
 });

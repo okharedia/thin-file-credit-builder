@@ -310,6 +310,22 @@ export function mkListCheckingAccountNegativeBalanceDayCounts(
   };
 }
 
+export function mkGetCheckingAccountNegativeBalanceDayCount(
+  args: DatabaseArgs,
+) {
+  const listCheckingAccountNegativeBalanceDayCounts =
+    mkListCheckingAccountNegativeBalanceDayCounts(args);
+
+  return (
+    query: CheckingAccountNegativeBalanceDayCountsArgs,
+  ): number => {
+    return listCheckingAccountNegativeBalanceDayCounts(query).reduce(
+      (total, account) => total + account.negativeBalanceDayCount,
+      0,
+    );
+  };
+}
+
 export function mkGetReliabilityMetrics(args: DatabaseArgs) {
   const database = getDatabase(args.databaseFilePath);
   const statement = database.prepare(`
