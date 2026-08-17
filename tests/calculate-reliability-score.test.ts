@@ -10,7 +10,7 @@ import {
   calculateReliabilityScore,
   calculateResiliencePoints,
   calculateSavingsBehaviorPoints,
-} from "../src/packages/calculate-reliability-score.js";
+} from "../src/packages/score/index.js";
 
 test("calculates income regularity points", () => {
   const cases = [
