@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
+import { rmSync } from "node:fs";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { test } from "node:test";
-import Database from "better-sqlite3";
 import { buildApp } from "../src/app.js";
 import type { Account, Transaction } from "../src/banking/index.js";
 import { mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
+import { createTempDatabase } from "./create-temp-database.js";
 
 const account: Account = {
   id: "checking-1",
@@ -62,16 +59,7 @@ test("returns the reliability score response", async (t) => {
   const address = categoryServer.address();
   assert(address && typeof address !== "string");
 
-  const testDirectory = await mkdtemp(join(tmpdir(), "credit-builder-test-"));
-  const databaseFilePath = join(testDirectory, "test.sqlite");
-  const schema = readFileSync(
-    new URL("../db/init.sql", import.meta.url),
-    "utf8",
-  );
-  const setupDatabase = new Database(databaseFilePath);
-  setupDatabase.exec(schema);
-  setupDatabase.close();
-
+  const { testDirectory, databaseFilePath } = await createTempDatabase();
   const args = {
     bankingApiBaseUrl: `http://127.0.0.1:${address.port}`,
     databaseFilePath,

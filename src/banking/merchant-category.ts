@@ -2,7 +2,7 @@ import * as z from "zod";
 import { bankingApiGet } from "./client.js";
 import type { BankingArgs } from "./index.js";
 
-export const merchantCategorySchema = z.object({
+const merchantCategorySchema = z.object({
   code: z.string(),
   name: z.string(),
   group: z.enum([

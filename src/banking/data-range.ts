@@ -2,7 +2,7 @@ import * as z from "zod";
 import { bankingApiGet } from "./client.js";
 import type { BankingArgs } from "./index.js";
 
-export const dataRangeSchema = z.object({
+const dataRangeSchema = z.object({
   from: z.iso.date(),
   to: z.iso.date(),
 });

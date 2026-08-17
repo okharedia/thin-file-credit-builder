@@ -1,19 +1,16 @@
-import Database from "better-sqlite3";
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { rmSync } from "node:fs";
 import { test } from "node:test";
 import type { Account, Transaction } from "../src/banking/index.js";
 import {
   mkCloseDatabase,
   mkListAccountDailyBalances,
-  mkListAccountNegativeBalanceDayCounts,
+  mkListCheckingAccountNegativeBalanceDayCounts,
   mkListUserAccounts,
   mkSaveAccounts,
   mkSaveTransactions,
 } from "../src/database.js";
+import { createTempDatabase } from "./create-temp-database.js";
 
 const account: Account = {
   id: "account-1",
@@ -61,16 +58,7 @@ function transaction(
 }
 
 test("reconstructs daily account balances from the closing balance", async (t) => {
-  const testDirectory = await mkdtemp(join(tmpdir(), "credit-builder-test-"));
-  const databaseFilePath = join(testDirectory, "test.sqlite");
-  const schema = readFileSync(
-    new URL("../db/init.sql", import.meta.url),
-    "utf8",
-  );
-  const setupDatabase = new Database(databaseFilePath);
-  setupDatabase.exec(schema);
-  setupDatabase.close();
-
+  const { testDirectory, databaseFilePath } = await createTempDatabase();
   const databaseArgs = { databaseFilePath };
   const closeDatabase = mkCloseDatabase(databaseArgs);
   const saveAccounts = mkSaveAccounts(databaseArgs);
@@ -78,8 +66,8 @@ test("reconstructs daily account balances from the closing balance", async (t) =
   const listAccountDailyBalances =
     mkListAccountDailyBalances(databaseArgs);
   const listUserAccounts = mkListUserAccounts(databaseArgs);
-  const listAccountNegativeBalanceDayCounts =
-    mkListAccountNegativeBalanceDayCounts(databaseArgs);
+  const listCheckingAccountNegativeBalanceDayCounts =
+    mkListCheckingAccountNegativeBalanceDayCounts(databaseArgs);
 
   t.after(() => {
     closeDatabase();
@@ -155,7 +143,7 @@ test("reconstructs daily account balances from the closing balance", async (t) =
   ]);
 
   assert.deepEqual(
-    listAccountNegativeBalanceDayCounts({
+    listCheckingAccountNegativeBalanceDayCounts({
       userId: account.user_id,
       startDate: "2026-01-01",
       endDate: "2026-01-05",

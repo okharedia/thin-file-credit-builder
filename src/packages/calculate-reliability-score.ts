@@ -37,15 +37,23 @@ type HighRiskSpendingMetrics = Pick<
 type ResilienceMetrics = SavingsBehaviorMetrics
   & LateFeeMetrics
   & HighRiskSpendingMetrics
-  & {
-    checkingAccountNegativeBalanceDayCounts:
-      readonly AccountNegativeBalanceDayCount[];
-  };
+  & NegativeBalanceMetrics;
 
 type ReliabilityScoreMetrics = IncomeRegularityMetrics
   & IncomeCoverageMetrics
   & EssentialPaymentsConsistencyMetrics
   & ResilienceMetrics;
+
+function requirePositiveScoringWindowMonthCount(
+  scoringWindowMonthCount: number,
+): void {
+  if (
+    !Number.isSafeInteger(scoringWindowMonthCount)
+    || scoringWindowMonthCount < 1
+  ) {
+    throw new RangeError("scoringWindowMonthCount must be a positive integer");
+  }
+}
 
 /**
  * Calculates the 0–25 income regularity points.
@@ -57,12 +65,7 @@ export function calculateIncomeRegularityPoints({
   incomeMonthCount,
   scoringWindowMonthCount,
 }: IncomeRegularityMetrics): number {
-  if (
-    !Number.isSafeInteger(scoringWindowMonthCount)
-    || scoringWindowMonthCount < 1
-  ) {
-    throw new RangeError("scoringWindowMonthCount must be a positive integer");
-  }
+  requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
 
   if (
     !Number.isSafeInteger(incomeMonthCount)
@@ -128,12 +131,7 @@ export function calculateEssentialPaymentsConsistencyPoints({
   essentialCategoryCount,
   scoringWindowMonthCount,
 }: EssentialPaymentsConsistencyMetrics): number {
-  if (
-    !Number.isSafeInteger(scoringWindowMonthCount)
-    || scoringWindowMonthCount < 1
-  ) {
-    throw new RangeError("scoringWindowMonthCount must be a positive integer");
-  }
+  requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
 
   if (
     !Number.isSafeInteger(essentialCategoryCount)
@@ -178,12 +176,7 @@ export function calculateSavingsBehaviorPoints({
   savingsMonthCount,
   scoringWindowMonthCount,
 }: SavingsBehaviorMetrics): number {
-  if (
-    !Number.isSafeInteger(scoringWindowMonthCount)
-    || scoringWindowMonthCount < 1
-  ) {
-    throw new RangeError("scoringWindowMonthCount must be a positive integer");
-  }
+  requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
 
   if (
     !Number.isSafeInteger(savingsMonthCount)
@@ -304,16 +297,11 @@ export function sumNegativeBalanceDayCounts(
  * negative balance day count = sum of each checking account's negative days
  * resilience points = savings + negative balance + late fees + high risk
  */
-export function calculateResiliencePoints({
-  checkingAccountNegativeBalanceDayCounts,
-  ...metrics
-}: ResilienceMetrics): number {
-  const negativeBalanceDayCount = sumNegativeBalanceDayCounts(
-    checkingAccountNegativeBalanceDayCounts,
-  );
-
+export function calculateResiliencePoints(
+  metrics: ResilienceMetrics,
+): number {
   return calculateSavingsBehaviorPoints(metrics)
-    + calculateNegativeBalancePoints({ negativeBalanceDayCount })
+    + calculateNegativeBalancePoints(metrics)
     + calculateLateFeePoints(metrics)
     + calculateHighRiskSpendingPoints(metrics);
 }

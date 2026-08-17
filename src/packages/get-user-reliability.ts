@@ -6,7 +6,7 @@ import {
 } from "../banking/index.js";
 import {
   mkGetReliabilityMetrics,
-  mkListAccountNegativeBalanceDayCounts,
+  mkListCheckingAccountNegativeBalanceDayCounts,
   type DatabaseArgs,
   type ReliabilityMetrics,
 } from "../database.js";
@@ -45,12 +45,9 @@ function scoreBand(score: number): "LOW" | "MEDIUM" | "HIGH" {
 
 function buildDrivers(
   metrics: ReliabilityMetrics,
+  incomeCoverageRatio: number,
   negativeBalanceDayCount: number,
 ): string[] {
-  const incomeCoverageRatio = ratio(
-    metrics.totalIncomeCents,
-    metrics.totalEssentialExpensesCents,
-  );
   const highRiskSpendingRatio = ratio(
     metrics.totalHighRiskDebitCents,
     metrics.totalSpendingDebitCents,
@@ -83,8 +80,8 @@ function buildDrivers(
 
 export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
   const getReliabilityMetrics = mkGetReliabilityMetrics(args);
-  const listAccountNegativeBalanceDayCounts =
-    mkListAccountNegativeBalanceDayCounts(args);
+  const listCheckingAccountNegativeBalanceDayCounts =
+    mkListCheckingAccountNegativeBalanceDayCounts(args);
   const listMerchantCategories = mkListMerchantCategories(args);
 
   return async (userId: string, from: string) => {
@@ -104,7 +101,7 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
       highRiskCategoryCodes: codesInGroup(categories, "high_risk"),
     });
     const checkingAccountNegativeBalanceDayCounts =
-      listAccountNegativeBalanceDayCounts({
+      listCheckingAccountNegativeBalanceDayCounts({
         userId,
         startDate,
         endDate,
@@ -115,7 +112,7 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
     const reliabilityIndex = calculateReliabilityScore({
       ...metrics,
       scoringWindowMonthCount: SCORING_WINDOW_MONTH_COUNT,
-      checkingAccountNegativeBalanceDayCounts,
+      negativeBalanceDayCount,
     });
     const incomeRegularity = ratio(
       metrics.incomeMonthCount,
@@ -148,7 +145,11 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs) {
         negative_balance_days: negativeBalanceDayCount,
         late_fee_events: metrics.lateFeeEventCount,
       },
-      drivers: buildDrivers(metrics, negativeBalanceDayCount),
+      drivers: buildDrivers(
+        metrics,
+        incomeCoverageRatio,
+        negativeBalanceDayCount,
+      ),
     };
   };
 }

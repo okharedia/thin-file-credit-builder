@@ -229,13 +229,10 @@ const reliabilityScoreMetrics = {
   lateFeeEventCount: 1,
   totalHighRiskDebitCents: 2_000,
   totalSpendingDebitCents: 10_000,
-  checkingAccountNegativeBalanceDayCounts: [
-    { accountId: "checking-1", negativeBalanceDayCount: 3 },
-    { accountId: "checking-2", negativeBalanceDayCount: 4 },
-  ],
+  negativeBalanceDayCount: 7,
 };
 
-test("combines resilience points using all checking-account negative days", () => {
+test("combines resilience points", () => {
   // Savings 17 - negative balances 7 - late fees 1 - high risk 1 = 8.
   assert.equal(calculateResiliencePoints(reliabilityScoreMetrics), 8);
 });
@@ -255,9 +252,7 @@ test("clamps the final reliability score to zero", () => {
       savingsMonthCount: 0,
       lateFeeEventCount: 5,
       totalHighRiskDebitCents: 10_000,
-      checkingAccountNegativeBalanceDayCounts: [
-        { accountId: "checking-1", negativeBalanceDayCount: 10 },
-      ],
+      negativeBalanceDayCount: 10,
     }),
     0,
   );

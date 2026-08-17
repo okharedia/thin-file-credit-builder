@@ -1,8 +1,9 @@
 import * as z from "zod";
 import { bankingApiGet } from "./client.js";
+import type { DataRange } from "./data-range.js";
 import type { BankingArgs } from "./index.js";
 
-export const transactionSchema = z.object({
+const transactionSchema = z.object({
   id: z.string(),
   account_id: z.string(),
   amount: z.number(),
@@ -16,7 +17,7 @@ export const transactionSchema = z.object({
 
 export type Transaction = z.infer<typeof transactionSchema>;
 
-export const transactionPageSchema = z.object({
+const transactionPageSchema = z.object({
   transactions: z.array(transactionSchema),
   next_cursor: z.string().nullable(),
 });
@@ -26,8 +27,7 @@ export type TransactionPage = z.infer<typeof transactionPageSchema>;
 export function mkGetTransactionPage(args: BankingArgs) {
   return async (
     accountId: string,
-    from: string,
-    to: string,
+    { from, to }: DataRange,
     cursor?: string,
   ) => {
     const url = new URL(

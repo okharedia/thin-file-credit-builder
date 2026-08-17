@@ -1,24 +1,13 @@
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { rmSync } from "node:fs";
 import { test } from "node:test";
 import Database from "better-sqlite3";
 import { mkCloseDatabase } from "../src/database.js";
 import { mkSyncUser } from "../src/packages/sync-user.js";
+import { createTempDatabase } from "./create-temp-database.js";
 
 test("reports duplicate transactions when syncing a user twice", async (t) => {
-  const testDirectory = await mkdtemp(join(tmpdir(), "credit-builder-test-"));
-  const databaseFilePath = join(testDirectory, "test.sqlite");
-  const schema = readFileSync(
-    new URL("../db/init.sql", import.meta.url),
-    "utf8",
-  );
-  const setupDatabase = new Database(databaseFilePath);
-  setupDatabase.exec(schema);
-  setupDatabase.close();
-
+  const { testDirectory, databaseFilePath } = await createTempDatabase();
   const args = {
     bankingApiBaseUrl:
       "https://btq03nn21b.execute-api.eu-central-1.amazonaws.com/",

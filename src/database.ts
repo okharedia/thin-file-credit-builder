@@ -6,10 +6,13 @@ export type DatabaseArgs = {
   databaseFilePath: string;
 };
 
-export type AccountDailyBalancesArgs = {
-  accountId: string;
+export type InclusiveDateRange = {
   startDate: string;
   endDate: string;
+};
+
+export type AccountDailyBalancesArgs = InclusiveDateRange & {
+  accountId: string;
   closingBalanceCents: number;
 };
 
@@ -24,21 +27,18 @@ export type StoredUserAccount = {
   balanceCents: number;
 };
 
-export type AccountNegativeBalanceDayCountsArgs = {
-  userId: string;
-  startDate: string;
-  endDate: string;
-};
+export type CheckingAccountNegativeBalanceDayCountsArgs = InclusiveDateRange
+  & {
+    userId: string;
+  };
 
 export type AccountNegativeBalanceDayCount = {
   accountId: string;
   negativeBalanceDayCount: number;
 };
 
-export type ReliabilityMetricsArgs = {
+export type ReliabilityMetricsArgs = InclusiveDateRange & {
   userId: string;
-  startDate: string;
-  endDate: string;
   incomeCategoryCodes: readonly string[];
   essentialCategoryCodes: readonly string[];
   savingsCategoryCodes: readonly string[];
@@ -81,6 +81,10 @@ function getDatabase(databaseFilePath: string): Database.Database {
   return database;
 }
 
+function toCents(amount: number): number {
+  return Math.round(amount * 100);
+}
+
 export function mkCloseDatabase(args: DatabaseArgs) {
   const databaseConnection = getDatabase(args.databaseFilePath);
 
@@ -110,7 +114,7 @@ export function mkSaveAccounts(args: DatabaseArgs) {
       account.user_id,
       account.type,
       account.currency,
-      Math.round(account.balance * 100),
+      toCents(account.balance),
       account.name,
     ]);
 
@@ -180,7 +184,7 @@ export function mkSaveTransactions(args: DatabaseArgs) {
     const values = transactions.flatMap((transaction) => [
       transaction.id,
       transaction.account_id,
-      Math.round(transaction.amount * 100),
+      toCents(transaction.amount),
       transaction.currency,
       transaction.date,
       transaction.description,
@@ -205,12 +209,11 @@ export function mkSaveTransactions(args: DatabaseArgs) {
         )
         VALUES ${placeholders}
         ON CONFLICT(id) DO NOTHING
-        RETURNING id
       `,
       )
-      .all(...values);
+      .run(...values);
 
-    return inserted.length;
+    return inserted.changes;
   };
 }
 
@@ -218,31 +221,23 @@ export function mkListAccountDailyBalances(args: DatabaseArgs) {
   const database = getDatabase(args.databaseFilePath);
   const statement = database.prepare(`
     WITH RECURSIVE
-    configuration AS (
-      SELECT
-        date(@startDate) AS start_date,
-        date(@endDate) AS end_date
-    ),
     days(day) AS (
-      SELECT start_date
-      FROM configuration
-      WHERE start_date <= end_date
+      SELECT @startDate
+      WHERE @startDate <= @endDate
 
       UNION ALL
 
       SELECT date(day, '+1 day')
       FROM days
-      CROSS JOIN configuration
-      WHERE day < end_date
+      WHERE day < @endDate
     ),
     daily_transactions AS (
       SELECT
         t.transaction_date AS day,
         SUM(t.amount_cents) AS daily_net_cents
       FROM transactions AS t
-      CROSS JOIN configuration
       WHERE t.account_id = @accountId
-        AND t.transaction_date BETWEEN start_date AND end_date
+        AND t.transaction_date BETWEEN @startDate AND @endDate
       GROUP BY t.transaction_date
     ),
     daily AS (
@@ -289,7 +284,9 @@ export function mkListAccountDailyBalances(args: DatabaseArgs) {
   };
 }
 
-export function mkListAccountNegativeBalanceDayCounts(args: DatabaseArgs) {
+export function mkListCheckingAccountNegativeBalanceDayCounts(
+  args: DatabaseArgs,
+) {
   const listUserAccounts = mkListUserAccounts(args);
   const listAccountDailyBalances = mkListAccountDailyBalances(args);
 
@@ -297,7 +294,7 @@ export function mkListAccountNegativeBalanceDayCounts(args: DatabaseArgs) {
     userId,
     startDate,
     endDate,
-  }: AccountNegativeBalanceDayCountsArgs): AccountNegativeBalanceDayCount[] => {
+  }: CheckingAccountNegativeBalanceDayCountsArgs): AccountNegativeBalanceDayCount[] => {
     return listUserAccounts(userId)
       .filter((account) => account.type === "checking")
       .map((account) => ({
@@ -415,6 +412,8 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
         AS "totalEssentialExpensesCents",
       metrics.essential_category_months
         AS "essentialCategoryMonthCount",
+      (SELECT COUNT(DISTINCT code) FROM essential_category_codes)
+        AS "essentialCategoryCount",
       metrics.months_with_savings AS "savingsMonthCount",
       metrics.late_fee_events AS "lateFeeEventCount",
       metrics.total_spending_debit_cents AS "totalSpendingDebitCents",
@@ -432,7 +431,7 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
     feeCategoryCodes,
     highRiskCategoryCodes,
   }: ReliabilityMetricsArgs): ReliabilityMetrics => {
-    const metrics = statement.get({
+    return statement.get({
       userId,
       startDate,
       endDate,
@@ -441,11 +440,6 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
       savingsCategoryCodesJson: JSON.stringify(savingsCategoryCodes),
       feeCategoryCodesJson: JSON.stringify(feeCategoryCodes),
       highRiskCategoryCodesJson: JSON.stringify(highRiskCategoryCodes),
-    }) as Omit<ReliabilityMetrics, "essentialCategoryCount">;
-
-    return {
-      ...metrics,
-      essentialCategoryCount: new Set(essentialCategoryCodes).size,
-    };
+    }) as ReliabilityMetrics;
   };
 }

@@ -1,9 +1,5 @@
-import Database from "better-sqlite3";
 import assert from "node:assert/strict";
-import { readFileSync, rmSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { rmSync } from "node:fs";
 import { test } from "node:test";
 import type { Account, Transaction } from "../src/banking/index.js";
 import {
@@ -12,6 +8,7 @@ import {
   mkSaveAccounts,
   mkSaveTransactions,
 } from "../src/database.js";
+import { createTempDatabase } from "./create-temp-database.js";
 
 const account: Account = {
   id: "account-1",
@@ -42,16 +39,7 @@ function transaction(
 }
 
 test("calculates reliability metrics from stored transactions", async (t) => {
-  const testDirectory = await mkdtemp(join(tmpdir(), "credit-builder-test-"));
-  const databaseFilePath = join(testDirectory, "test.sqlite");
-  const schema = readFileSync(
-    new URL("../db/init.sql", import.meta.url),
-    "utf8",
-  );
-  const setupDatabase = new Database(databaseFilePath);
-  setupDatabase.exec(schema);
-  setupDatabase.close();
-
+  const { testDirectory, databaseFilePath } = await createTempDatabase();
   const databaseArgs = { databaseFilePath };
   const closeDatabase = mkCloseDatabase(databaseArgs);
   const saveAccounts = mkSaveAccounts(databaseArgs);
