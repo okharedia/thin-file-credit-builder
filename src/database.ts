@@ -3,124 +3,114 @@ import { resolve } from "node:path";
 import type { Account, Transaction } from "./banking/index.js";
 
 export type DatabaseArgs = {
-  databaseFilePath: string;
+    databaseFilePath: string;
 };
 
 export type InclusiveDateRange = {
-  startDate: string;
-  endDate: string;
+    startDate: string;
+    endDate: string;
 };
 
 export type AccountDailyBalancesArgs = InclusiveDateRange & {
-  accountId: string;
-  closingBalanceCents: number;
+    accountId: string;
+    closingBalanceCents: number;
 };
 
 export type AccountDailyBalance = {
-  day: string;
-  endOfDayBalanceCents: number;
+    day: string;
+    endOfDayBalanceCents: number;
 };
 
 export type StoredUserAccount = {
-  id: string;
-  type: Account["type"];
-  balanceCents: number;
+    id: string;
+    type: Account["type"];
+    balanceCents: number;
 };
 
-export type CheckingAccountNegativeBalanceDayCountsArgs = InclusiveDateRange
-  & {
+export type CheckingAccountNegativeBalanceDayCountsArgs = InclusiveDateRange & {
     userId: string;
-  };
+};
 
 export type AccountNegativeBalanceDayCount = {
-  accountId: string;
-  negativeBalanceDayCount: number;
+    accountId: string;
+    negativeBalanceDayCount: number;
 };
 
 export type ReliabilityMetricsArgs = InclusiveDateRange & {
-  userId: string;
-  incomeCategoryCodes: readonly string[];
-  essentialCategoryCodes: readonly string[];
-  savingsCategoryCodes: readonly string[];
-  feeCategoryCodes: readonly string[];
-  highRiskCategoryCodes: readonly string[];
+    userId: string;
+    incomeCategoryCodes: readonly string[];
+    essentialCategoryCodes: readonly string[];
+    savingsCategoryCodes: readonly string[];
+    feeCategoryCodes: readonly string[];
+    highRiskCategoryCodes: readonly string[];
 };
 
 export type ReliabilityMetrics = {
-  incomeMonthCount: number;
-  totalIncomeCents: number;
-  totalEssentialExpensesCents: number;
-  essentialCategoryMonthCount: number;
-  essentialCategoryCount: number;
-  savingsMonthCount: number;
-  lateFeeEventCount: number;
-  totalSpendingDebitCents: number;
-  totalHighRiskDebitCents: number;
+    incomeMonthCount: number;
+    totalIncomeCents: number;
+    totalEssentialExpensesCents: number;
+    essentialCategoryMonthCount: number;
+    essentialCategoryCount: number;
+    savingsMonthCount: number;
+    lateFeeEventCount: number;
+    totalSpendingDebitCents: number;
+    totalHighRiskDebitCents: number;
 };
 
 let database: Database.Database | undefined;
 let singleDatabaseFilePath: string | undefined;
 
 function getDatabase(databaseFilePath: string): Database.Database {
-  const databasePath = resolve(databaseFilePath);
+    const databasePath = resolve(databaseFilePath);
 
-  if (database) {
-    if (singleDatabaseFilePath !== databasePath) {
-      throw new Error(
-        `Database singleton already initialized for ${singleDatabaseFilePath}`,
-      );
+    if (database) {
+        if (singleDatabaseFilePath !== databasePath) {
+            throw new Error(`Database singleton already initialized for ${singleDatabaseFilePath}`);
+        }
+
+        return database;
     }
 
+    database = new Database(databasePath, { fileMustExist: true });
+    database.pragma("foreign_keys = ON");
+    singleDatabaseFilePath = databasePath;
+
     return database;
-  }
-
-  database = new Database(databasePath, { fileMustExist: true });
-  database.pragma("foreign_keys = ON");
-  singleDatabaseFilePath = databasePath;
-
-  return database;
 }
 
 function toCents(amount: number): number {
-  return Math.round(amount * 100);
+    return Math.round(amount * 100);
 }
 
 export function mkCloseDatabase(args: DatabaseArgs) {
-  const databaseConnection = getDatabase(args.databaseFilePath);
+    const databaseConnection = getDatabase(args.databaseFilePath);
 
-  return () => {
-    if (databaseConnection.open) {
-      databaseConnection.close();
-    }
+    return () => {
+        if (databaseConnection.open) {
+            databaseConnection.close();
+        }
 
-    if (database === databaseConnection) {
-      database = undefined;
-      singleDatabaseFilePath = undefined;
-    }
-  };
+        if (database === databaseConnection) {
+            database = undefined;
+            singleDatabaseFilePath = undefined;
+        }
+    };
 }
 
 export function mkSaveAccounts(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
+    const database = getDatabase(args.databaseFilePath);
 
-  return (accounts: Account[]) => {
-    if (accounts.length === 0) {
-      return;
-    }
+    return (accounts: Account[]) => {
+        if (accounts.length === 0) {
+            return;
+        }
 
-    const placeholders = accounts.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
-    const values = accounts.flatMap((account) => [
-      account.id,
-      account.user_id,
-      account.type,
-      account.currency,
-      toCents(account.balance),
-      account.name,
-    ]);
+        const placeholders = accounts.map(() => "(?, ?, ?, ?, ?, ?)").join(", ");
+        const values = accounts.flatMap((account) => [account.id, account.user_id, account.type, account.currency, toCents(account.balance), account.name]);
 
-    database
-      .prepare(
-        `
+        database
+            .prepare(
+                `
         INSERT INTO accounts (
           id,
           user_id,
@@ -137,25 +127,22 @@ export function mkSaveAccounts(args: DatabaseArgs) {
           balance_cents = excluded.balance_cents,
           name = excluded.name
       `,
-      )
-      .run(...values);
-  };
+            )
+            .run(...values);
+    };
 }
 
 export function mkListAccountIds(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
+    const database = getDatabase(args.databaseFilePath);
 
-  return (userId: string): string[] => {
-    return database
-      .prepare("SELECT id FROM accounts WHERE user_id = ?")
-      .pluck()
-      .all(userId) as string[];
-  };
+    return (userId: string): string[] => {
+        return database.prepare("SELECT id FROM accounts WHERE user_id = ?").pluck().all(userId) as string[];
+    };
 }
 
 export function mkListUserAccounts(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
-  const statement = database.prepare(`
+    const database = getDatabase(args.databaseFilePath);
+    const statement = database.prepare(`
     SELECT
       id,
       type,
@@ -165,37 +152,25 @@ export function mkListUserAccounts(args: DatabaseArgs) {
     ORDER BY id
   `);
 
-  return (userId: string): StoredUserAccount[] => {
-    return statement.all(userId) as StoredUserAccount[];
-  };
+    return (userId: string): StoredUserAccount[] => {
+        return statement.all(userId) as StoredUserAccount[];
+    };
 }
 
 export function mkSaveTransactions(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
+    const database = getDatabase(args.databaseFilePath);
 
-  return (transactions: Transaction[]): number => {
-    if (transactions.length === 0) {
-      return 0;
-    }
+    return (transactions: Transaction[]): number => {
+        if (transactions.length === 0) {
+            return 0;
+        }
 
-    const placeholders = transactions
-      .map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
-      .join(", ");
-    const values = transactions.flatMap((transaction) => [
-      transaction.id,
-      transaction.account_id,
-      toCents(transaction.amount),
-      transaction.currency,
-      transaction.date,
-      transaction.description,
-      transaction.merchant_category_code,
-      transaction.merchant_name,
-      transaction.type,
-    ]);
+        const placeholders = transactions.map(() => "(?, ?, ?, ?, ?, ?, ?, ?, ?)").join(", ");
+        const values = transactions.flatMap((transaction) => [transaction.id, transaction.account_id, toCents(transaction.amount), transaction.currency, transaction.date, transaction.description, transaction.merchant_category_code, transaction.merchant_name, transaction.type]);
 
-    const inserted = database
-      .prepare(
-        `
+        const inserted = database
+            .prepare(
+                `
         INSERT INTO transactions (
           id,
           account_id,
@@ -210,16 +185,16 @@ export function mkSaveTransactions(args: DatabaseArgs) {
         VALUES ${placeholders}
         ON CONFLICT(id) DO NOTHING
       `,
-      )
-      .run(...values);
+            )
+            .run(...values);
 
-    return inserted.changes;
-  };
+        return inserted.changes;
+    };
 }
 
 export function mkListAccountDailyBalances(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
-  const statement = database.prepare(`
+    const database = getDatabase(args.databaseFilePath);
+    const statement = database.prepare(`
     WITH RECURSIVE
     days(day) AS (
       SELECT @startDate
@@ -269,66 +244,46 @@ export function mkListAccountDailyBalances(args: DatabaseArgs) {
     ORDER BY day
   `);
 
-  return ({
-    accountId,
-    startDate,
-    endDate,
-    closingBalanceCents,
-  }: AccountDailyBalancesArgs): AccountDailyBalance[] => {
-    return statement.all({
-      accountId,
-      startDate,
-      endDate,
-      closingBalanceCents,
-    }) as AccountDailyBalance[];
-  };
+    return ({ accountId, startDate, endDate, closingBalanceCents }: AccountDailyBalancesArgs): AccountDailyBalance[] => {
+        return statement.all({
+            accountId,
+            startDate,
+            endDate,
+            closingBalanceCents,
+        }) as AccountDailyBalance[];
+    };
 }
 
-export function mkListCheckingAccountNegativeBalanceDayCounts(
-  args: DatabaseArgs,
-) {
-  const listUserAccounts = mkListUserAccounts(args);
-  const listAccountDailyBalances = mkListAccountDailyBalances(args);
+export function mkListCheckingAccountNegativeBalanceDayCounts(args: DatabaseArgs) {
+    const listUserAccounts = mkListUserAccounts(args);
+    const listAccountDailyBalances = mkListAccountDailyBalances(args);
 
-  return ({
-    userId,
-    startDate,
-    endDate,
-  }: CheckingAccountNegativeBalanceDayCountsArgs): AccountNegativeBalanceDayCount[] => {
-    return listUserAccounts(userId)
-      .filter((account) => account.type === "checking")
-      .map((account) => ({
-        accountId: account.id,
-        negativeBalanceDayCount: listAccountDailyBalances({
-          accountId: account.id,
-          startDate,
-          endDate,
-          closingBalanceCents: account.balanceCents,
-        }).filter(({ endOfDayBalanceCents }) => endOfDayBalanceCents < 0)
-          .length,
-      }));
-  };
+    return ({ userId, startDate, endDate }: CheckingAccountNegativeBalanceDayCountsArgs): AccountNegativeBalanceDayCount[] => {
+        return listUserAccounts(userId)
+            .filter((account) => account.type === "checking")
+            .map((account) => ({
+                accountId: account.id,
+                negativeBalanceDayCount: listAccountDailyBalances({
+                    accountId: account.id,
+                    startDate,
+                    endDate,
+                    closingBalanceCents: account.balanceCents,
+                }).filter(({ endOfDayBalanceCents }) => endOfDayBalanceCents < 0).length,
+            }));
+    };
 }
 
-export function mkGetCheckingAccountNegativeBalanceDayCount(
-  args: DatabaseArgs,
-) {
-  const listCheckingAccountNegativeBalanceDayCounts =
-    mkListCheckingAccountNegativeBalanceDayCounts(args);
+export function mkGetCheckingAccountNegativeBalanceDayCount(args: DatabaseArgs) {
+    const listCheckingAccountNegativeBalanceDayCounts = mkListCheckingAccountNegativeBalanceDayCounts(args);
 
-  return (
-    query: CheckingAccountNegativeBalanceDayCountsArgs,
-  ): number => {
-    return listCheckingAccountNegativeBalanceDayCounts(query).reduce(
-      (total, account) => total + account.negativeBalanceDayCount,
-      0,
-    );
-  };
+    return (query: CheckingAccountNegativeBalanceDayCountsArgs): number => {
+        return listCheckingAccountNegativeBalanceDayCounts(query).reduce((total, account) => total + account.negativeBalanceDayCount, 0);
+    };
 }
 
 export function mkGetReliabilityMetrics(args: DatabaseArgs) {
-  const database = getDatabase(args.databaseFilePath);
-  const statement = database.prepare(`
+    const database = getDatabase(args.databaseFilePath);
+    const statement = database.prepare(`
     WITH
     income_category_codes AS (
       SELECT CAST(value AS TEXT) AS code
@@ -437,25 +392,16 @@ export function mkGetReliabilityMetrics(args: DatabaseArgs) {
     FROM metrics
   `);
 
-  return ({
-    userId,
-    startDate,
-    endDate,
-    incomeCategoryCodes,
-    essentialCategoryCodes,
-    savingsCategoryCodes,
-    feeCategoryCodes,
-    highRiskCategoryCodes,
-  }: ReliabilityMetricsArgs): ReliabilityMetrics => {
-    return statement.get({
-      userId,
-      startDate,
-      endDate,
-      incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
-      essentialCategoryCodesJson: JSON.stringify(essentialCategoryCodes),
-      savingsCategoryCodesJson: JSON.stringify(savingsCategoryCodes),
-      feeCategoryCodesJson: JSON.stringify(feeCategoryCodes),
-      highRiskCategoryCodesJson: JSON.stringify(highRiskCategoryCodes),
-    }) as ReliabilityMetrics;
-  };
+    return ({ userId, startDate, endDate, incomeCategoryCodes, essentialCategoryCodes, savingsCategoryCodes, feeCategoryCodes, highRiskCategoryCodes }: ReliabilityMetricsArgs): ReliabilityMetrics => {
+        return statement.get({
+            userId,
+            startDate,
+            endDate,
+            incomeCategoryCodesJson: JSON.stringify(incomeCategoryCodes),
+            essentialCategoryCodesJson: JSON.stringify(essentialCategoryCodes),
+            savingsCategoryCodesJson: JSON.stringify(savingsCategoryCodes),
+            feeCategoryCodesJson: JSON.stringify(feeCategoryCodes),
+            highRiskCategoryCodesJson: JSON.stringify(highRiskCategoryCodes),
+        }) as ReliabilityMetrics;
+    };
 }

@@ -11,24 +11,18 @@ import { requirePositiveScoringWindowMonthCount } from "./require-positive-scori
  * transaction, regardless of the number or value of those transactions.
  */
 export function calculateSavingsBehaviorPoints({
-  savingsMonthCount,
-  scoringWindowMonthCount,
+    savingsMonthCount,
+    scoringWindowMonthCount,
 }: Pick<ReliabilityMetrics, "savingsMonthCount"> & {
-  scoringWindowMonthCount: number;
+    scoringWindowMonthCount: number;
 }): number {
-  requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
+    requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
 
-  if (
-    !Number.isSafeInteger(savingsMonthCount)
-    || savingsMonthCount < 0
-    || savingsMonthCount > scoringWindowMonthCount
-  ) {
-    throw new RangeError(
-      "savingsMonthCount must be between zero and scoringWindowMonthCount",
-    );
-  }
+    if (!Number.isSafeInteger(savingsMonthCount) || savingsMonthCount < 0 || savingsMonthCount > scoringWindowMonthCount) {
+        throw new RangeError("savingsMonthCount must be between zero and scoringWindowMonthCount");
+    }
 
-  const savingsBehavior = savingsMonthCount / scoringWindowMonthCount;
+    const savingsBehavior = savingsMonthCount / scoringWindowMonthCount;
 
-  return Math.round(savingsBehavior * 25);
+    return Math.round(savingsBehavior * 25);
 }

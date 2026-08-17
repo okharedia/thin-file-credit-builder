@@ -8,24 +8,18 @@ import { requirePositiveScoringWindowMonthCount } from "./require-positive-scori
  * points = round(income regularity × 25)
  */
 export function calculateIncomeRegularityPoints({
-  incomeMonthCount,
-  scoringWindowMonthCount,
+    incomeMonthCount,
+    scoringWindowMonthCount,
 }: Pick<ReliabilityMetrics, "incomeMonthCount"> & {
-  scoringWindowMonthCount: number;
+    scoringWindowMonthCount: number;
 }): number {
-  requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
+    requirePositiveScoringWindowMonthCount(scoringWindowMonthCount);
 
-  if (
-    !Number.isSafeInteger(incomeMonthCount)
-    || incomeMonthCount < 0
-    || incomeMonthCount > scoringWindowMonthCount
-  ) {
-    throw new RangeError(
-      "incomeMonthCount must be between zero and scoringWindowMonthCount",
-    );
-  }
+    if (!Number.isSafeInteger(incomeMonthCount) || incomeMonthCount < 0 || incomeMonthCount > scoringWindowMonthCount) {
+        throw new RangeError("incomeMonthCount must be between zero and scoringWindowMonthCount");
+    }
 
-  const incomeRegularity = incomeMonthCount / scoringWindowMonthCount;
+    const incomeRegularity = incomeMonthCount / scoringWindowMonthCount;
 
-  return Math.round(incomeRegularity * 25);
+    return Math.round(incomeRegularity * 25);
 }

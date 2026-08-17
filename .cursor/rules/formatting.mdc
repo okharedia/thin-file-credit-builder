@@ -1,0 +1,11 @@
+---
+description: Indent and line-length conventions for this repo
+globs: "**/*.{ts,js,mjs,cjs,json}"
+alwaysApply: false
+---
+
+# Formatting
+
+- Indent with 4 spaces, never 2
+- Do not wrap lines to 80 or 100 characters. Keep statements on one line unless a break is required for syntax or readability of a long chained expression
+- Print width is effectively unlimited (Prettier `printWidth: 999`)

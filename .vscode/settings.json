@@ -1,13 +1,20 @@
 {
-  "testing.gutterEnabled": true,
-  "nodejs-testing.extensions": [
-    {
-      "extensions": ["mjs", "cjs", "js"],
-      "parameters": []
-    },
-    {
-      "extensions": ["mts", "cts", "ts", "tsx"],
-      "parameters": ["--import", "tsx"]
-    }
-  ]
+    "testing.gutterEnabled": true,
+    "nodejs-testing.extensions": [
+        {
+            "extensions": ["mjs", "cjs", "js"],
+            "parameters": []
+        },
+        {
+            "extensions": ["mts", "cts", "ts", "tsx"],
+            "parameters": ["--import", "tsx"]
+        }
+    ],
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true,
+    "editor.detectIndentation": false,
+    "editor.wordWrap": "off",
+    "editor.rulers": [],
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true
 }

@@ -11,27 +11,17 @@ import type { ReliabilityMetrics } from "../../database.js";
  * essential-expense total earns zero because it cannot produce a meaningful
  * coverage ratio.
  */
-export function calculateIncomeCoveragePoints({
-  totalIncomeCents,
-  totalEssentialExpensesCents,
-}: Pick<
-  ReliabilityMetrics,
-  "totalIncomeCents" | "totalEssentialExpensesCents"
->): number {
-  if (
-    !Number.isSafeInteger(totalIncomeCents)
-    || !Number.isSafeInteger(totalEssentialExpensesCents)
-  ) {
-    throw new RangeError("income and essential expense totals must be integers");
-  }
+export function calculateIncomeCoveragePoints({ totalIncomeCents, totalEssentialExpensesCents }: Pick<ReliabilityMetrics, "totalIncomeCents" | "totalEssentialExpensesCents">): number {
+    if (!Number.isSafeInteger(totalIncomeCents) || !Number.isSafeInteger(totalEssentialExpensesCents)) {
+        throw new RangeError("income and essential expense totals must be integers");
+    }
 
-  if (totalIncomeCents <= 0 || totalEssentialExpensesCents <= 0) {
-    return 0;
-  }
+    if (totalIncomeCents <= 0 || totalEssentialExpensesCents <= 0) {
+        return 0;
+    }
 
-  const incomeCoverageRatio =
-    totalIncomeCents / totalEssentialExpensesCents;
-  const cappedCoverageRatio = Math.min(incomeCoverageRatio, 2);
+    const incomeCoverageRatio = totalIncomeCents / totalEssentialExpensesCents;
+    const cappedCoverageRatio = Math.min(incomeCoverageRatio, 2);
 
-  return Math.round((cappedCoverageRatio / 2) * 25);
+    return Math.round((cappedCoverageRatio / 2) * 25);
 }
