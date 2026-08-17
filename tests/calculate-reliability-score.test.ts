@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { calculateEssentialPaymentsConsistencyPoints, calculateIncomeCoveragePoints, calculateIncomeRegularityPoints, calculateReliabilityScore, calculateResiliencePoints } from "../src/packages/score/index.js";
+import { calculateEssentialPaymentsConsistencyPoints, calculateIncomeCoveragePoints, calculateIncomeRegularityPoints, calculateReliabilityScore, calculateResiliencePoints } from "../src/score/index.js";
 
 test("calculates income regularity points", () =>
 {

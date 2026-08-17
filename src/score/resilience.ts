@@ -1,4 +1,4 @@
-import type { ReliabilityMetrics } from "../../database.js";
+import type { ReliabilityMetrics } from "../database.js";
 
 export type ResilienceMetrics = Pick<ReliabilityMetrics, "savingsMonthCount" | "lateFeeEventCount" | "totalHighRiskDebitCents" | "totalSpendingDebitCents"> & {
         scoringWindowMonthCount: number;

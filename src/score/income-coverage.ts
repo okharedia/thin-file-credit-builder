@@ -1,4 +1,4 @@
-import type { ReliabilityMetrics } from "../../database.js";
+import type { ReliabilityMetrics } from "../database.js";
 
 /**
  * Calculates the 0–25 income coverage points.

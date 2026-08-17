@@ -1,4 +1,4 @@
-import type { ReliabilityMetrics } from "../../database.js";
+import type { ReliabilityMetrics } from "../database.js";
 import { ratio } from "../utils/ratio.js";
 
 export function buildDrivers(metrics: ReliabilityMetrics, negativeBalanceDayCount: number, scoringWindowMonthCount: number): string[]

@@ -1,4 +1,4 @@
-import { mkGetCheckingAccountNegativeBalanceDayCount, mkGetReliabilityMetrics, type DatabaseArgs } from "../../database.js";
+import { mkGetCheckingAccountNegativeBalanceDayCount, mkGetReliabilityMetrics, type DatabaseArgs } from "../database.js";
 import { codesInGroup, mkListMerchantCategories, type BankingArgs } from "../banking/index.js";
 import { buildDrivers } from "../score/drivers.js";
 import { calculateReliabilityScore } from "../score/index.js";

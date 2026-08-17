@@ -1,5 +1,5 @@
 import { mkGetDataRange, mkGetTransactionPage, mkListAccounts, type BankingArgs } from "../banking/index.js";
-import { mkListAccountIds, mkSaveAccounts, mkSaveTransactions, type DatabaseArgs } from "../../database.js";
+import { mkListAccountIds, mkSaveAccounts, mkSaveTransactions, type DatabaseArgs } from "../database.js";
 import { formatIsoDate } from "../utils/iso-date.js";
 
 export function mkSyncUser(args: BankingArgs & DatabaseArgs)

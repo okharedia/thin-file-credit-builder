@@ -1,4 +1,4 @@
-import type { ReliabilityMetrics } from "../../database.js";
+import type { ReliabilityMetrics } from "../database.js";
 import { calculateEssentialPaymentsConsistencyPoints } from "./essential-payments-consistency.js";
 import { calculateIncomeCoveragePoints } from "./income-coverage.js";
 import { calculateIncomeRegularityPoints } from "./income-regularity.js";

@@ -1,10 +1,10 @@
 import Fastify from "fastify";
 import * as z from "zod";
-import type { BankingArgs } from "./packages/banking/index.js";
+import type { BankingArgs } from "./banking/index.js";
 import { mkCloseDatabase, type DatabaseArgs } from "./database.js";
-import { isoDateSchema } from "./packages/utils/iso-date.js";
-import { mkGetUserReliability } from "./packages/user/reliability.js";
-import { mkSyncUser } from "./packages/user/sync.js";
+import { isoDateSchema } from "./utils/iso-date.js";
+import { mkGetUserReliability } from "./user/reliability.js";
+import { mkSyncUser } from "./user/sync.js";
 
 type UserParams = {
         userId: string;

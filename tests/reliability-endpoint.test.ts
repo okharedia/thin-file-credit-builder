@@ -4,7 +4,7 @@ import { createServer } from "node:http";
 import { test } from "node:test";
 import { parseISO } from "date-fns";
 import { buildApp } from "../src/app.js";
-import type { Account, Transaction } from "../src/packages/banking/index.js";
+import type { Account, Transaction } from "../src/banking/index.js";
 import { mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
 

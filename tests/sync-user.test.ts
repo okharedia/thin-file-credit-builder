@@ -3,7 +3,7 @@ import { rmSync } from "node:fs";
 import { test } from "node:test";
 import Database from "better-sqlite3";
 import { mkCloseDatabase } from "../src/database.js";
-import { mkSyncUser } from "../src/packages/user/sync.js";
+import { mkSyncUser } from "../src/user/sync.js";
 import { createTempDatabase } from "./create-temp-database.js";
 
 test("reports duplicate transactions when syncing a user twice", async (t) =>
