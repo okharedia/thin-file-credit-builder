@@ -1,21 +1,24 @@
-import { mkGetDataRange, mkGetTransactionPage, mkListAccounts, type BankingArgs } from "../banking/index.js";
-import { mkListAccountIds, mkSaveAccounts, mkSaveTransactions, type DatabaseArgs } from "../database.js";
+import { mkFetchMerchantCategories, mkGetDataRange, mkGetTransactionPage, mkListAccounts, type BankingArgs } from "../banking/index.js";
+import { mkListAccountIds, mkSaveAccounts, mkSaveMerchantCategories, mkSaveTransactions, type DatabaseArgs } from "../database.js";
 import { formatIsoDate } from "../utils/iso-date.js";
 
 export function mkSyncUser(args: BankingArgs & DatabaseArgs)
 {
+        const fetchMerchantCategories = mkFetchMerchantCategories(args);
         const getDataRange = mkGetDataRange(args);
         const getTransactionPage = mkGetTransactionPage(args);
         const listAccounts = mkListAccounts(args);
         const listAccountIds = mkListAccountIds(args);
         const saveAccounts = mkSaveAccounts(args);
+        const saveMerchantCategories = mkSaveMerchantCategories(args);
         const saveTransactions = mkSaveTransactions(args);
 
         return async (userId: string) =>
         {
-                const [accounts, dataRange] = await Promise.all([listAccounts(userId), getDataRange()]);
+                const [accounts, dataRange, merchantCategories] = await Promise.all([listAccounts(userId), getDataRange(), fetchMerchantCategories()]);
 
                 saveAccounts(accounts);
+                saveMerchantCategories(merchantCategories);
 
                 const pageTotals = await Promise.all(
                         listAccountIds(userId).map(async (accountId) =>

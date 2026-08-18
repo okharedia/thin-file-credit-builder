@@ -26,4 +26,12 @@ CREATE TABLE IF NOT EXISTS transactions (
 CREATE INDEX IF NOT EXISTS transactions_account_date_idx
   ON transactions(account_id, transaction_date);
 
+CREATE TABLE IF NOT EXISTS merchant_categories (
+  code TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  "group" TEXT NOT NULL CHECK (
+    "group" IN ('essential', 'discretionary', 'high_risk', 'savings', 'cash', 'income', 'fees')
+  )
+) STRICT;
+
 COMMIT;

@@ -1,11 +1,10 @@
 import { parseISO } from "date-fns";
 import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
-import { createServer } from "node:http";
 import { test } from "node:test";
 import { buildApp } from "../src/app.js";
 import type { Account, Transaction } from "../src/banking/index.js";
-import { mkSaveAccounts, mkSaveTransactions } from "../src/database.js";
+import { mkSaveAccounts, mkSaveMerchantCategories, mkSaveTransactions } from "../src/database.js";
 import { createTempDatabase } from "./create-temp-database.js";
 
 const account: Account = {
@@ -34,46 +33,22 @@ function transaction(id: string, date: string, amount: number, merchantCategoryC
 
 test("returns the reliability score response", async (t) =>
 {
-        const categoryServer = createServer((request, response) =>
-        {
-                if (request.url !== "/dictionaries/merchant-categories")
-                {
-                        response.writeHead(404).end();
-
-                        return;
-                }
-
-                response.writeHead(200, { "content-type": "application/json" });
-                response.end(
-                        JSON.stringify({
-                                categories: [
-                                        { code: "6513", name: "Rent", group: "essential" },
-                                        { code: "9001", name: "Salary", group: "income" },
-                                        { code: "6540", name: "Savings", group: "savings" },
-                                        { code: "6012", name: "Late fees", group: "fees" },
-                                        { code: "7995", name: "Gambling", group: "high_risk" },
-                                ],
-                        }),
-                );
-        });
-
-        await new Promise<void>((resolve) =>
-        {
-                categoryServer.listen(0, "127.0.0.1", resolve);
-        });
-        const address = categoryServer.address();
-
-        assert(address && typeof address !== "string");
-
         const { testDirectory, databaseFilePath } = await createTempDatabase();
-        const args = {
-                bankingApiBaseUrl: `http://127.0.0.1:${address.port}`,
-                databaseFilePath,
-        };
+        // /sync is never called in this test, so this base URL is unused — the
+        // reliability endpoint reads merchant categories from local storage.
+        const args = { bankingApiBaseUrl: "http://127.0.0.1:0", databaseFilePath };
         const saveAccounts = mkSaveAccounts(args);
+        const saveMerchantCategories = mkSaveMerchantCategories(args);
         const saveTransactions = mkSaveTransactions(args);
 
         saveAccounts([account]);
+        saveMerchantCategories([
+                { code: "6513", name: "Rent", group: "essential" },
+                { code: "9001", name: "Salary", group: "income" },
+                { code: "6540", name: "Savings", group: "savings" },
+                { code: "6012", name: "Late fees", group: "fees" },
+                { code: "7995", name: "Gambling", group: "high_risk" },
+        ]);
         saveTransactions([
                 //
                 transaction("september-income", "2025-09-02", 100, "9001"),
@@ -101,10 +76,6 @@ test("returns the reliability score response", async (t) =>
         t.after(async () =>
         {
                 await app.close();
-                await new Promise<void>((resolve, reject) =>
-                {
-                        categoryServer.close((error) => (error ? reject(error) : resolve()));
-                });
                 rmSync(testDirectory, { recursive: true, force: true });
         });
 
@@ -121,8 +92,8 @@ test("returns the reliability score response", async (t) =>
                 reliability_index: 82,
                 score_band: "HIGH",
                 metrics: {
-                        income_regularity: 5 / 6,
-                        income_coverage_ratio: 5 / 3,
+                        income_regularity: 0.83,
+                        income_coverage_ratio: 1.67,
                         essential_payments_consistency: 1,
                         good_months: 4,
                         negative_balance_days: 0,
