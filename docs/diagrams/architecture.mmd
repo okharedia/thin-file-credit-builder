@@ -1,0 +1,9 @@
+flowchart LR
+  Client[HTTP client] --> API[Fastify]
+  API --> Sync["user/sync"]
+  API --> Rel["user/reliability"]
+  Sync --> Banking[banking]
+  Banking --> Remote[Banking API]
+  Sync --> DB[(SQLite)]
+  Rel --> DB
+  Rel --> Score[score]

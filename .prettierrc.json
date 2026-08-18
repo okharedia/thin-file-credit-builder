@@ -1,0 +1,9 @@
+{
+        "tabWidth": 8,
+        "printWidth": 999,
+        "semi": true,
+        "singleQuote": false,
+        "trailingComma": "all",
+        "plugins": ["prettier-plugin-brace-style", "./prettier-local-plugin.js"],
+        "braceStyle": "allman"
+}

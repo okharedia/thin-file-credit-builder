@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant Client
+  participant API as Fastify
+  participant Rel as user/reliability
+  participant DB as SQLite
+  participant Score as score
+
+  Client->>API: GET /api/users/:userId/reliability?from=YYYY-MM-DD
+  API->>Rel: derive 6-month scoring window
+  Rel->>DB: merchant category snapshot
+  Rel->>DB: reliability metrics in window
+  Rel->>DB: checking-account negative days
+  Rel->>Score: A + B + C + D, clamp 0–100
+  Rel-->>Client: index, band, metrics, drivers
