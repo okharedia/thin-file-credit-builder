@@ -30,6 +30,8 @@ The Banking API serves multiple test users with different financial profiles. Us
 curl "{{BANKING_API_BASE_URL}}/"
 ```
 
+
+
 ### API Reference
 
 The full API specification is available as an OpenAPI 3.0 document:
@@ -40,7 +42,11 @@ You can also explore the API interactively using the discovery endpoint (`GET /`
 
 ---
 
+
+
 ## What to Build
+
+
 
 ### Endpoint 1: Sync Transactions
 
@@ -49,12 +55,14 @@ POST /api/users/{userId}/sync
 ```
 
 Behavior:
+
 1. Fetch all accounts for the user from the Banking API
 2. For each account, fetch all transactions (handle pagination)
 3. Store transactions locally (handle duplicates)
 4. Return a sync summary
 
 **Response:**
+
 ```json
 {
   "user_id": "user_1001",
@@ -64,6 +72,8 @@ Behavior:
   "synced_from": "2025-09-01"
 }
 ```
+
+
 
 ### Endpoint 2: Reliability Index
 
@@ -77,6 +87,7 @@ Compute the reliability index from locally stored transactions.
 Example: `from=2026-02-20` → window = `2025-09-01` to `2026-02-20`
 
 **Response:**
+
 ```json
 {
   "user_id": "user_1001",
@@ -100,6 +111,8 @@ Example: `from=2026-02-20` → window = `2025-09-01` to `2026-02-20`
 ```
 
 ---
+
+
 
 ## Scoring Model
 
@@ -135,26 +148,36 @@ A "category-month" is present if at least one transaction with that essential ca
 
 Combine these sub-signals:
 
-| Signal | Range | Description |
-|--------|-------|-------------|
-| Savings behavior | +0 to +25 | Transactions categorized as `savings` |
-| Negative balance days | 0 to −10 | Estimated days with negative running balance |
-| Late fee events | 0 to −5 | Transactions categorized as `fees` |
-| High-risk spending | 0 to −5 | Proportion of spending in `high_risk` categories |
+
+| Signal                | Range     | Description                                      |
+| --------------------- | --------- | ------------------------------------------------ |
+| Savings behavior      | +0 to +25 | Transactions categorized as `savings`            |
+| Negative balance days | 0 to −10  | Estimated days with negative running balance     |
+| Late fee events       | 0 to −5   | Transactions categorized as `fees`               |
+| High-risk spending    | 0 to −5   | Proportion of spending in `high_risk` categories |
+
+
+
 
 ### Score Bands
 
-| Band | Range |
-|------|-------|
-| LOW | 0–49 |
-| MEDIUM | 50–74 |
-| HIGH | 75–100 |
+
+| Band   | Range  |
+| ------ | ------ |
+| LOW    | 0–49   |
+| MEDIUM | 50–74  |
+| HIGH   | 75–100 |
+
+
+
 
 ### Drivers
 
 Include a `drivers` array in the response with human-readable explanations of what influenced the score. These help analysts understand the decision.
 
 ---
+
+
 
 ## Constraints
 
@@ -165,19 +188,23 @@ Include a `drivers` array in the response with human-readable explanations of wh
 
 ---
 
+
+
 ## Deliverables
 
 1. **Working service** exposing both endpoints
 2. **README** including:
-   - Setup and run instructions
-   - How to call the endpoints (example curl commands)
-   - Assumptions and trade-offs
-   - Scoring limitations and bias considerations
-   - AI usage disclosure (if applicable)
+  - Setup and run instructions
+  - How to call the endpoints (example curl commands)
+  - Assumptions and trade-offs
+  - Scoring limitations and bias considerations
+  - AI usage disclosure (if applicable)
 3. **Diagrams** — at least one architecture diagram and one sequence diagram
 4. **Tests** — appreciated but not required
 
 ---
+
+
 
 ## Discussion Topics
 
@@ -196,6 +223,8 @@ We will explore them during the **discussion interview** to understand your thin
 - **Incident Thinking** — If scores suddenly shift or the sync fails in production, how would you debug it? What observability would you add?
 
 ---
+
+
 
 ## What We Value
 
