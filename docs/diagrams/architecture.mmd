@@ -3,8 +3,7 @@ flowchart LR
   API --> Sync["user/sync"]
   API --> Rel["user/reliability"]
   Sync --> Banking[banking]
-  Rel --> Banking
-  Rel --> Score[score]
+  Banking --> Remote[Banking API]
   Sync --> DB[(SQLite)]
   Rel --> DB
-  Banking --> Remote[Banking API]
+  Rel --> Score[score]
