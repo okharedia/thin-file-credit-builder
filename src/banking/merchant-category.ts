@@ -20,7 +20,7 @@ const listMerchantCategoriesResponseSchema = z.object({
         categories: z.array(merchantCategorySchema),
 });
 
-export function mkListMerchantCategories(args: BankingArgs)
+export function mkFetchMerchantCategories(args: BankingArgs)
 {
         return async (): Promise<MerchantCategory[]> =>
         {

@@ -1,14 +1,15 @@
-import { mkGetCheckingAccountNegativeBalanceDayCount, mkGetReliabilityMetrics, type DatabaseArgs } from "../database.js";
-import { codesInGroup, mkListMerchantCategories, type BankingArgs } from "../banking/index.js";
+import { mkGetCheckingAccountNegativeBalanceDayCount, mkGetReliabilityMetrics, mkListMerchantCategories, type DatabaseArgs } from "../database.js";
+import { codesInGroup } from "../banking/index.js";
 import { buildDrivers } from "../score/drivers.js";
 import { calculateReliabilityScore } from "../score/index.js";
 import { formatIsoDate } from "../utils/iso-date.js";
 import { ratio } from "../utils/ratio.js";
+import { roundTo } from "../utils/round.js";
 import { getScoringWindow } from "../utils/scoring-window.js";
 
 const SCORING_WINDOW_MONTH_COUNT = 6;
 
-export function mkGetUserReliability(args: BankingArgs & DatabaseArgs)
+export function mkGetUserReliability(args: DatabaseArgs)
 {
         const getReliabilityMetrics = mkGetReliabilityMetrics(args);
         const getCheckingAccountNegativeBalanceDayCount = mkGetCheckingAccountNegativeBalanceDayCount(args);
@@ -18,7 +19,9 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs)
         {
                 const { startDate, endDate } = getScoringWindow(from, SCORING_WINDOW_MONTH_COUNT);
 
-                const categories = await listMerchantCategories();
+                // Read the locally stored dictionary snapshot (refreshed on any /sync),
+                // not a live Banking API call, so scoring doesn't call out on every request.
+                const categories = listMerchantCategories();
 
                 const metrics = getReliabilityMetrics({
                         userId,
@@ -50,9 +53,9 @@ export function mkGetUserReliability(args: BankingArgs & DatabaseArgs)
                         reliability_index: reliabilityIndex,
                         score_band: reliabilityIndex < 50 ? "LOW" : reliabilityIndex < 75 ? "MEDIUM" : "HIGH",
                         metrics: {
-                                income_regularity: ratio(metrics.incomeMonthCount, SCORING_WINDOW_MONTH_COUNT),
-                                income_coverage_ratio: ratio(metrics.totalIncomeCents, metrics.totalEssentialExpensesCents),
-                                essential_payments_consistency: ratio(metrics.essentialCategoryMonthCount, SCORING_WINDOW_MONTH_COUNT * metrics.essentialCategoryCount),
+                                income_regularity: roundTo(ratio(metrics.incomeMonthCount, SCORING_WINDOW_MONTH_COUNT)),
+                                income_coverage_ratio: roundTo(ratio(metrics.totalIncomeCents, metrics.totalEssentialExpensesCents)),
+                                essential_payments_consistency: roundTo(ratio(metrics.essentialCategoryMonthCount, SCORING_WINDOW_MONTH_COUNT * metrics.essentialCategoryCount)),
                                 good_months: metrics.savingsMonthCount,
                                 negative_balance_days: negativeBalanceDayCount,
                                 late_fee_events: metrics.lateFeeEventCount,

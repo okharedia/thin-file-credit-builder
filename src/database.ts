@@ -1,6 +1,6 @@
 import Database from "better-sqlite3";
 import { resolve } from "node:path";
-import type { Account, Transaction } from "./banking/index.js";
+import type { Account, MerchantCategory, Transaction } from "./banking/index.js";
 import { formatIsoDate } from "./utils/iso-date.js";
 
 export type DatabaseArgs = {
@@ -139,6 +139,43 @@ export function mkSaveAccounts(args: DatabaseArgs)
           name = excluded.name
       `,
                 ).run(...values);
+        };
+}
+
+export function mkSaveMerchantCategories(args: DatabaseArgs)
+{
+        const database = getDatabase(args.databaseFilePath);
+
+        return (categories: MerchantCategory[]) =>
+        {
+                if (categories.length === 0)
+                {
+                        return;
+                }
+
+                const placeholders = categories.map(() => "(?, ?, ?)").join(", ");
+                const values = categories.flatMap((category) => [category.code, category.name, category.group]);
+
+                database.prepare(
+                        `
+        INSERT INTO merchant_categories (code, name, "group")
+        VALUES ${placeholders}
+        ON CONFLICT(code) DO UPDATE SET
+          name = excluded.name,
+          "group" = excluded."group"
+      `,
+                ).run(...values);
+        };
+}
+
+export function mkListMerchantCategories(args: DatabaseArgs)
+{
+        const database = getDatabase(args.databaseFilePath);
+        const statement = database.prepare(`SELECT code, name, "group" FROM merchant_categories`);
+
+        return (): MerchantCategory[] =>
+        {
+                return statement.all() as MerchantCategory[];
         };
 }
 
