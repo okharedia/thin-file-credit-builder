@@ -1,0 +1,16 @@
+services:
+        app:
+                build: .
+                init: true
+                ports:
+                        - "3000:3000"
+                environment:
+                        PORT: "3000"
+                        DATABASE_PATH: /app/data/thin-file-credit-builder.sqlite
+                        BANKING_API_BASE_URL: https://btq03nn21b.execute-api.eu-central-1.amazonaws.com/
+                        BANKING_API_KEY: development
+                volumes:
+                        - credit-builder-data:/app/data
+
+volumes:
+        credit-builder-data:
