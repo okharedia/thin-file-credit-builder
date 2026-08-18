@@ -168,7 +168,7 @@ export function mkSaveMerchantCategories(args: DatabaseArgs)
         };
 }
 
-export function mkListStoredMerchantCategories(args: DatabaseArgs)
+export function mkListMerchantCategories(args: DatabaseArgs)
 {
         const database = getDatabase(args.databaseFilePath);
         const statement = database.prepare(`SELECT code, name, "group" FROM merchant_categories`);

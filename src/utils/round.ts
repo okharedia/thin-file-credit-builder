@@ -1,4 +1,4 @@
-export function roundTo(value: number, decimalPlaces: number): number
+export function roundTo(value: number, decimalPlaces = 2): number
 {
         const factor = 10 ** decimalPlaces;
 
