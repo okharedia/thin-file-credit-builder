@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: app
+    description: >
+      The application's SQLite database, attached read-only. Written by
+      POST /api/users/:userId/sync; never written by dbt.
+    database: app
+    schema: main
+    tables:
+      - name: accounts
+      - name: transactions
+      - name: merchant_categories

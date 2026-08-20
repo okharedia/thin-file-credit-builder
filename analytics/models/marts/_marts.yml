@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: fct_user_daily_metrics
+    description: >
+      Reliability metrics over the trailing 6-calendar-month window, for every
+      (user, as_of_date) whose window is fully covered by observed data.
+      Consumed by GET /api/users/:userId/reliability. Emits scoring *inputs*
+      only -- the score, the band and the drivers stay in src/score.
+    columns:
+      - name: user_id
+        description: Owning user. Sourced from accounts, so users with no transactions still appear.
+        data_tests:
+          - not_null
+
+      - name: as_of_date
+        description: The `from` value this row answers. Absent when the window is not fully observed.
+        data_tests:
+          - not_null
+
+      - name: window_start_date
+        description: First day of the scoring window; date_trunc('month', as_of_date - 5 months).
+        data_tests:
+          - not_null
+
+      - name: window_end_date
+        description: Last day of the scoring window, always equal to as_of_date.
+        data_tests:
+          - not_null
+
+      - name: income_month_count
+        description: Distinct months in the window containing at least one income transaction (0-6).
+        data_tests:
+          - not_null
+
+      - name: total_income_cents
+        description: Sum of income transaction amounts. Credits are positive.
+        data_tests:
+          - not_null
+
+      - name: total_essential_expenses_cents
+        description: Sum of essential-category spending, sign-flipped to positive.
+        data_tests:
+          - not_null
+
+      - name: essential_category_month_count
+        description: Distinct (essential category, month) pairs present in the window (0-36).
+        data_tests:
+          - not_null
+
+      - name: essential_category_count
+        description: >
+          Count of essential codes in the merchant category dictionary -- the
+          denominator of essential payments consistency. Global, not per user,
+          so a user is measured against every essential category that exists.
+        data_tests:
+          - not_null
+
+      - name: savings_month_count
+        description: Distinct months containing a positive savings movement (0-6).
+        data_tests:
+          - not_null
+
+      - name: late_fee_event_count
+        description: Count of transactions in the fees category. Not capped here; the cap lives in scoring.
+        data_tests:
+          - not_null
+
+      - name: total_spending_debit_cents
+        description: All debit spending except savings transfers, sign-flipped to positive.
+        data_tests:
+          - not_null
+
+      - name: total_high_risk_debit_cents
+        description: The high-risk subset of total_spending_debit_cents.
+        data_tests:
+          - not_null
+
+      - name: negative_balance_day_count
+        description: >
+          Checking-account-days in the window ending below zero, counted per
+          account: two accounts negative on the same day count twice.
+
+          UNRELIABLE ON THE CURRENT MOCK DATA. It is reconstructed from
+          accounts.balance_cents rolled back over the transaction history, and
+          the mock Banking API generates balances independently of that
+          history -- 10 of 15 accounts imply a negative opening balance. See
+          analytics/README.md.
+        data_tests:
+          - not_null
+
+      - name: built_at
+        description: Timestamp of the dbt run that produced this row. The mart is only as fresh as the last analytics:build.
+        data_tests:
+          - not_null
+
+    data_tests:
+      - unique:
+          column_name: "user_id || ':' || as_of_date"

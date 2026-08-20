@@ -14,7 +14,11 @@
                 "format:check": "eslint .",
                 "lint": "eslint .",
                 "lint:fix": "eslint . --fix",
-                "docs:diagrams": "tsx scripts/render-diagrams.ts"
+                "docs:diagrams": "tsx scripts/render-diagrams.ts",
+                "sync:all": "tsx scripts/sync-all-users.ts",
+                "analytics:setup": "uv venv --python 3.12 .venv && uv pip install --python .venv/bin/python -r analytics/requirements.txt",
+                "analytics:build": "./.venv/bin/dbt build --project-dir analytics --profiles-dir analytics",
+                "analytics:parity": "tsx scripts/analytics-parity.ts"
         },
         "dependencies": {
                 "better-sqlite3": "^13.0.3",
@@ -25,6 +29,7 @@
         "devDependencies": {
                 "@babel/core": "^8.0.1",
                 "@babel/eslint-parser": "^8.0.1",
+                "@duckdb/node-api": "^1.5.5-r.4",
                 "@stylistic/eslint-plugin": "^5.10.0",
                 "@types/better-sqlite3": "^9.6.0",
                 "@types/node": "^26.2.0",

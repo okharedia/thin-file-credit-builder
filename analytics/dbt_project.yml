@@ -1,0 +1,22 @@
+name: thin_file_analytics
+version: 0.1.0
+config-version: 2
+
+profile: thin_file_analytics
+
+model-paths: ["models"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Must match SCORING_WINDOW_MONTH_COUNT in src/user/reliability.ts.
+  scoring_window_month_count: 6
+
+models:
+  thin_file_analytics:
+    # Everything is materialized as a table, including staging. Views would
+    # reference the attached `app` catalog, which makes analytics.duckdb
+    # unreadable unless the SQLite file is attached again at query time. The
+    # dataset is small enough that tables cost nothing and the resulting file
+    # stands alone.
+    +materialized: table

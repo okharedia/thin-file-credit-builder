@@ -1,0 +1,16 @@
+thin_file_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Paths are relative to the process working directory, so dbt must be run
+      # from the repository root (see the analytics:* scripts in package.json).
+      path: "{{ env_var('ANALYTICS_DUCKDB_PATH', 'data/analytics.duckdb') }}"
+      threads: 4
+      extensions:
+        - sqlite
+      attach:
+        - path: "{{ env_var('DATABASE_PATH', 'data/thin-file-credit-builder.sqlite') }}"
+          alias: app
+          type: sqlite
+          read_only: true

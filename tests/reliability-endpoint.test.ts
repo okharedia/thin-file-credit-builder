@@ -1,82 +1,43 @@
-import { parseISO } from "date-fns";
 import assert from "node:assert/strict";
 import { rmSync } from "node:fs";
 import { test } from "node:test";
 import { buildApp } from "../src/app.js";
-import type { Account, Transaction } from "../src/banking/index.js";
-import { mkSaveAccounts, mkSaveMerchantCategories, mkSaveTransactions } from "../src/database.js";
+import { createTempAnalytics, type UserDailyMetricsRow } from "./create-temp-analytics.js";
 import { createTempDatabase } from "./create-temp-database.js";
 
-const account: Account = {
-        id: "checking-1",
-        user_id: "user-1",
-        type: "checking",
-        currency: "EUR",
-        balance: 1_000,
-        name: "Checking",
+// The same window the pre-mart version of this test built out of individual
+// transactions: five months of income, six months of rent, four months of
+// savings, one late fee and one high-risk debit.
+const metrics: UserDailyMetricsRow = {
+        userId: "user-1",
+        asOfDate: "2026-02-20",
+        windowStartDate: "2025-09-01",
+        windowEndDate: "2026-02-20",
+        incomeMonthCount: 5,
+        totalIncomeCents: 50_000,
+        totalEssentialExpensesCents: 30_000,
+        essentialCategoryMonthCount: 6,
+        essentialCategoryCount: 1,
+        savingsMonthCount: 4,
+        lateFeeEventCount: 1,
+        totalSpendingDebitCents: 35_500,
+        totalHighRiskDebitCents: 5_000,
+        negativeBalanceDayCount: 0,
 };
-
-function transaction(id: string, date: string, amount: number, merchantCategoryCode: string): Transaction
-{
-        return {
-                id,
-                account_id: account.id,
-                amount,
-                currency: "EUR",
-                date: parseISO(date),
-                description: "Test transaction",
-                merchant_category_code: merchantCategoryCode,
-                merchant_name: "Test merchant",
-                type: amount > 0 ? "credit" : "debit",
-        };
-}
 
 test("returns the reliability score response", async (t) =>
 {
         const { testDirectory, databaseFilePath } = await createTempDatabase();
-        // /sync is never called in this test, so this base URL is unused — the
-        // reliability endpoint reads merchant categories from local storage.
-        const args = { bankingApiBaseUrl: "http://127.0.0.1:0", databaseFilePath };
-        const saveAccounts = mkSaveAccounts(args);
-        const saveMerchantCategories = mkSaveMerchantCategories(args);
-        const saveTransactions = mkSaveTransactions(args);
-
-        saveAccounts([account]);
-        saveMerchantCategories([
-                { code: "6513", name: "Rent", group: "essential" },
-                { code: "9001", name: "Salary", group: "income" },
-                { code: "6540", name: "Savings", group: "savings" },
-                { code: "6012", name: "Late fees", group: "fees" },
-                { code: "7995", name: "Gambling", group: "high_risk" },
-        ]);
-        saveTransactions([
-                //
-                transaction("september-income", "2025-09-02", 100, "9001"),
-                transaction("october-income", "2025-10-02", 100, "9001"),
-                transaction("november-income", "2025-11-02", 100, "9001"),
-                transaction("december-income", "2025-12-02", 100, "9001"),
-                transaction("january-income", "2026-01-02", 100, "9001"),
-                transaction("september-savings", "2025-09-03", 10, "6540"),
-                transaction("october-savings", "2025-10-03", 10, "6540"),
-                transaction("november-savings", "2025-11-03", 10, "6540"),
-                transaction("december-savings", "2025-12-03", 10, "6540"),
-                transaction("september-rent", "2025-09-05", -50, "6513"),
-                transaction("october-rent", "2025-10-05", -50, "6513"),
-                transaction("november-rent", "2025-11-05", -50, "6513"),
-                transaction("december-rent", "2025-12-05", -50, "6513"),
-                transaction("january-rent", "2026-01-05", -50, "6513"),
-                transaction("february-rent", "2026-02-05", -50, "6513"),
-                transaction("late-fee", "2026-01-10", -5, "6012"),
-                transaction("high-risk", "2026-02-10", -50, "7995"),
-                //
-        ]);
-
+        const { testDirectory: analyticsDirectory, analyticsFilePath } = await createTempAnalytics([metrics]);
+        // /sync is never called in this test, so this base URL is unused.
+        const args = { bankingApiBaseUrl: "http://127.0.0.1:0", databaseFilePath, analyticsFilePath };
         const app = buildApp(args);
 
         t.after(async () =>
         {
                 await app.close();
                 rmSync(testDirectory, { recursive: true, force: true });
+                rmSync(analyticsDirectory, { recursive: true, force: true });
         });
 
         const response = await app.inject({
@@ -111,4 +72,62 @@ test("returns the reliability score response", async (t) =>
         assert.deepEqual(invalidResponse.json(), {
                 error: "from must be a valid date in YYYY-MM-DD format",
         });
+});
+
+test("returns 404 with the scoreable range for a date the mart cannot answer", async (t) =>
+{
+        const { testDirectory, databaseFilePath } = await createTempDatabase();
+        const { testDirectory: analyticsDirectory, analyticsFilePath } = await createTempAnalytics([metrics]);
+        const app = buildApp({ bankingApiBaseUrl: "http://127.0.0.1:0", databaseFilePath, analyticsFilePath });
+
+        t.after(async () =>
+        {
+                await app.close();
+                rmSync(testDirectory, { recursive: true, force: true });
+                rmSync(analyticsDirectory, { recursive: true, force: true });
+        });
+
+        // Before any fully-observed window exists. The pre-mart implementation
+        // answered this with a zero-filled score.
+        const tooEarly = await app.inject({
+                method: "GET",
+                url: "/api/users/user-1/reliability?from=2025-10-15",
+        });
+
+        assert.equal(tooEarly.statusCode, 404);
+        assert.deepEqual(tooEarly.json(), {
+                error: "No reliability score is available for that date. Its 6-month scoring window is not fully covered by synced banking data.",
+                scoreable_from: "2026-02-20",
+                scoreable_to: "2026-02-20",
+        });
+
+        const tooLate = await app.inject({
+                method: "GET",
+                url: "/api/users/user-1/reliability?from=2099-01-01",
+        });
+
+        assert.equal(tooLate.statusCode, 404);
+        assert.equal(tooLate.json().scoreable_to, "2026-02-20");
+});
+
+test("returns 404 for a user with no synced data", async (t) =>
+{
+        const { testDirectory, databaseFilePath } = await createTempDatabase();
+        const { testDirectory: analyticsDirectory, analyticsFilePath } = await createTempAnalytics([metrics]);
+        const app = buildApp({ bankingApiBaseUrl: "http://127.0.0.1:0", databaseFilePath, analyticsFilePath });
+
+        t.after(async () =>
+        {
+                await app.close();
+                rmSync(testDirectory, { recursive: true, force: true });
+                rmSync(analyticsDirectory, { recursive: true, force: true });
+        });
+
+        const response = await app.inject({
+                method: "GET",
+                url: "/api/users/unknown-user/reliability?from=2026-02-20",
+        });
+
+        assert.equal(response.statusCode, 404);
+        assert.match(response.json().error, /No synced data for user unknown-user/);
 });

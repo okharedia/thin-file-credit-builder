@@ -5,9 +5,13 @@ node_modules
 dist
 data
 .env
+.venv
 tests
 docs
 coverage
 *.md
 backend-assignment.md
+analytics/target
+analytics/logs
+logs
 .DS_Store

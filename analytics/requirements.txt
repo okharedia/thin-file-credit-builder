@@ -1,0 +1,5 @@
+# Pinned so `npm run analytics:build` cannot pick up a different dbt engine.
+# Note: a globally installed `dbt` may be dbt-fusion, which is a different
+# implementation; the analytics:* scripts always call ./.venv/bin/dbt.
+dbt-core==1.12.2
+dbt-duckdb==1.11.0
